@@ -1,0 +1,468 @@
+---
+title: "DAT 301 Module 5 Notes"
+author: "Samantha Tran"
+date: "12/28/2020"
+output: word_document
+---
+
+Cite:  https://mastering-shiny.org/basic-app.html
+
+#### Intro to the shiny app package
+
+Three key components of every Shiny app: 
+
+- the UI (short for user interface) which defines how your app looks
+
+- the server function which defines how your app works
+
+- reactive programming to automatically update outputs when inputs change
+
+If you haven’t already installed Shiny, install it:  `install.packages("shiny")`
+
+Check your version (want 1.5.0 or greater):  `packageVersion("shiny")`
+
+Then load in your current R session:  `library(shiny)`
+
+#### Creating/running/stopping shiny app
+
+There are several ways to create a Shiny app. The simplest is to create a new directory for your app, and put a single file called app.R in it. This app.R file will be used to tell Shiny both how your app should look, and how it should behave.
+
+Try it out by creating a new directory, and adding an app.R file that looks like this:
+
+```{r}
+library(shiny)  ## calls shiny package
+ui <- fluidPage("Hello, world!")  ## defines user interface, HTML page
+server <- function(input, output, session) {}  ## specifies the behavior of app by defining a server function
+shinyApp(ui, server)  ## constructs and starts a Shiny application from UI and server
+```
+
+To run shiny app:
+
+- Click 'run'
+
+- Cmd/Ctr + Enter
+
+When you have the running HTML up, RStudio will display: `#> Listening on http://127.0.0.1:3544`.  This tells you the URL where your app can be found: 127.0.0.1 is a standard address that means “this computer” and 3827 is a randomly assigned port number. You can enter that URL into any compatible2 web browser to open another copy of your app.
+
+Also notice that R is busy: the R prompt isn’t visible, and the console toolbar displays a stop sign icon. While a Shiny app is running, it “blocks” the R console. This means that you can’t run new commands at the R console until the Shiny app stops.
+
+To stop shiny app:
+
+- Close window
+
+- Click "Stop"
+
+- Hit "Esc" in console
+
+The basic workflow of Shiny app development is to write some code, start the app, play with the app, write some more code, and repeat. If you’re using RStudio, you don’t even need to stop and re-start the app to see your changes — you can either press the Reload app button in the toolbox or use the Cmd/Ctrl + Shift + Enter keyboard shortcut. I’ll cover otherworkflow patterns in Chapter 5.
+
+#### Adding UI controls to the shiny app
+
+Four new functions:
+
+- `fluidPage()`: layout function that sets up the basic visual structure of the page
+
+- `selectInput()`: input control that lets the user interact with the app by providing a value; i.e. selecting a box to put one of the built in datasets into it
+
+- `verbatimTextOutput()` and `tableOutput()`: output controls; tell shiny where to put the rendered output; `verbatimTextOutput()` displays the code and `tableOutput()` displays the tables
+
+Example:  The following code will show Figure 1.3, a page containing a select box. We only see the input, not the two outputs, because we haven’t yet told Shiny how the input and outputs are related.
+
+```{r}
+ui <- fluidPage(
+  selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
+  verbatimTextOutput("summary"),
+  tableOutput("table")
+)
+
+shinyApp(ui, server)  ## constructs and starts a Shiny application from UI and server
+```
+
+#### Adding behavior
+
+Bring the outputs to life by defining them in the server function.
+
+Shiny uses reactive programming to make apps interactive. Reactive programming involves telling Shiny how to perform a computation, not ordering Shiny to actually go do it. It’s like the difference between giving someone a recipe versus demanding that they go make you a sandwich.
+
+The left-hand side of the assignment operator (<-), `output$ID`, indicates that you’re providing the recipe for the Shiny output with that ID. The right-hand side of the assignment uses a specific render function to wrap some code that you provide. Each `render{Type}` function is designed to produce a particular type of output (e.g. text, tables, and plots), and is often paired with a `{type}Output` function. 
+
+For example, in this app, `renderPrint()` is paired with `verbatimTextOutput()` to display a statistical summary with fixed-width (verbatim) text, and `renderTable()` is paired with `tableOutput()` to show the input data in a table.
+
+When we change the `server` to include outputs, when you select a dataframe, the output will actually be displayed.  This is the essence of reactivity: outputs automatically react (recalculate) when their inputs change.
+
+```{r}
+
+## input$dataset is populated with the current value of the UI component with id dataset
+
+server <- function(input, output, session) {
+  output$summary <- renderPrint({
+    dataset <- get(input$dataset, "package:datasets")
+    summary(dataset)
+  })
+  
+  output$table <- renderTable({
+    dataset <- get(input$dataset, "package:datasets")
+    dataset
+  })
+}
+
+shinyApp(ui, server)  ## constructs and starts a Shiny application from UI and server
+```
+
+#### Using `reactive()` function
+
+You create a reactive expression by wrapping a block of code in reactive({...}) and assigning it to a variable, and you use a reactive expression by calling it like a function. But while it looks like you’re calling a function, a reactive expression has an important difference: it only runs the first time it is called and then it caches its result until it needs to be updated.
+
+We can update our server() to use reactive expressions, as shown below. The app behaves identically, but works a little more efficiently because it only needs to retrieve the dataset once, not twice.
+
+```{r}
+server <- function(input, output, session) {
+  # Create a reactive expression
+  dataset <- reactive({
+    get(input$dataset, "package:datasets")
+  })
+
+  output$summary <- renderPrint({
+    # Use a reactive expression by calling it like a function
+    summary(dataset())
+  })
+  
+  output$table <- renderTable({
+    dataset()
+  })
+}
+
+shinyApp(ui, server)  ## constructs and starts a Shiny application from UI and server
+```
+
+#### Shiny inputs
+
+**First argument**: `inputId`
+
+- `inputId` must be a simple string that contains only letters, numbers, and underscores (no spaces, dashes, periods, or other special characters allowed!). Name it like you would name a variable in R.
+
+- `inputId` must be unique. If it’s not unique, you’ll have no way to refer to this control in your server function!
+
+Most input functions have a second parameter called label. This is used to create a human-readable label for the control. Shiny doesn’t place any restrictions on this string, but you’ll need to carefully think about it to make sure that your app is usable by humans! The third parameter is typically value, which, where possible, lets you set the default value. The remaining parameters are unique to the control.
+
+**Free-text**:
+
+Collect small amounts of text with `textInput()`, passwords with `passwordInput()`, and paragraphs of text with `textAreaInput()`.
+
+Example:
+
+```{r}
+ui <- fluidPage(
+  textInput("name", "What's your name?"),
+  passwordInput("password", "What's your password?"),
+  textAreaInput("story", "Tell me about yourself", rows = 3)
+)
+
+shinyApp(ui, server)
+```
+
+**Numeric inputs**:
+
+To collect numeric values, create a constrained text box with `numericInput()` or a slider with `sliderInput()`. If you supply a length-2 numeric vector for the default value of `sliderInput()`, you get a "range" slider with two ends.
+
+Example:
+
+```{r}
+ui <- fluidPage(
+  numericInput("num", "Number one", value = 0, min = 0, max = 100),
+  sliderInput("num2", "Number two", value = 50, min = 0, max = 100), # value is default number
+  sliderInput("rng", "Range", value = c(10, 20), min = 0, max = 100)
+)
+
+shinyApp(ui, server)
+```
+
+**Limited choices**: 
+
+There are two different approaches to allow the user to choose from a pre-specified set of options: `selectInput()` and `radioButtons()`.
+
+```{r}
+animals <- c("dog", "cat", "mouse", "bird", "other")
+
+ui <- fluidPage(
+  selectInput("state", "What's your favourite state?", state.name), # package is in r for state names
+  radioButtons("animal", "What's your favourite animal?", animals) # takes a vector
+)
+
+shinyApp(ui, server)
+```
+
+More details:
+
+- `radioButtons()`:  `choiceNames` determines what is shown to the user; `choiceValues` determines what is returned in your server function.
+
+Example:
+
+```{r}
+ui <- fluidPage(
+  radioButtons("rb", "Choose one:",
+    choiceNames = list( #user choices in UI
+      icon("angry"),
+      icon("smile"),
+      icon("sad-tear")
+    ),
+    choiceValues = list("angry", "happy", "sad") # values stored to server
+  )
+)
+
+shinyApp(ui, server)
+```
+
+- `selectInput()`:  can include dropdowns
+
+```{r}
+ui <- fluidPage(
+  selectInput(
+    "state", "What's your favourite state?", state.name,
+    multiple = TRUE # can choose multiple selections for user
+  )
+)
+
+shinyApp(ui, server)
+```
+
+#### Action Buttons
+
+Actions links and buttons are most naturally paired with `observeEvent()` or `eventReactive()` in your server function.
+
+You can customize the appearance using the class argument (button appearance) by using one of "btn-primary", "btn-success", "btn-info", "btn-warning", or "btn-danger". You can also change the size with "btn-lg", "btn-sm", "btn-xs". Finally, you can make buttons span the entire width of the element they are embedded within using "btn-block".
+
+```{r}
+ui <- fluidPage(
+  fluidRow(
+    actionButton("click", "Click me!", class = "btn-danger"),
+    actionButton("drink", "Drink me!", class = "btn-lg btn-success")
+  ),
+  fluidRow(
+    actionButton("eat", "Eat me!", class = "btn-block")
+  )
+)
+
+shinyApp(ui, server)
+```
+
+#### Text
+
+Output regular text with `textOutput()` and fixed code and console output with `verbatimTextOutput()` for the UI.
+
+For the server:
+
+- `renderText()` combines the result into a single string, and is usually paired with textOutput()
+
+- `renderPrint()` prints the result, as if you were in an R console, and is usually paired with verbatimTextOutput()
+
+Use {} to indicate multiple lines of code are being run.  (In the below example this isn't necessary but used for demonstration).
+
+Example:
+
+```{r}
+ui <- fluidPage(
+  textOutput("text"), # from  render text
+  verbatimTextOutput("code") # console output from R code
+)
+server <- function(input, output, session) { #curly braces for multiple lines of code
+  output$text <- renderText({ 
+    "Summary of Numbers 1 through 10" 
+  })
+  output$code <- renderPrint({ 
+    summary(1:10) 
+  })
+}
+
+shinyApp(ui, server)
+```
+
+#### Tables
+
+There are two options for displaying data frames in tables:
+
+- `tableOutput()` and `renderTable()` render a static table of data, showing all the data at once
+
+- `dataTableOutput()` and `renderDataTable()` render a dynamic table, showing a fixed number of rows along with controls to change which rows are visible.
+
+`tableOutput()` is most useful for small, fixed summaries (e.g. model coefficients); `dataTableOutput()` is most appropriate if you want to expose a complete data frame to the user.
+
+Example:
+```{r}
+ui <- fluidPage(
+  tableOutput("static"), # argument in name of table
+  dataTableOutput("dynamic")
+)
+server <- function(input, output, session) {
+  output$static <- renderTable(head(mtcars, 3)) #first three rows
+  output$dynamic <- renderDataTable(mtcars, options = list(pageLength = 5)) 
+}
+
+shinyApp(ui, server)
+```
+
+#### Plots
+
+You can display any type of R graphic (base, ggplot2, plotly or otherwise) with `plotOutput()` and `renderPlot()`:
+
+```{r}
+ui <- fluidPage(plotOutput("plot", width = "400px"))
+server <- function(input, output, session) {
+  output$plot <- renderPlot(plot(x = mtcars$wt, y = mtcars$mpg, pch = 16), res = 96)
+}
+
+shinyApp(ui, server)
+```
+
+By default, `plotOutput()` will take up the full width of its container (more on that shortly), and will be 400 pixels high. You can override these defaults with the height and width arguments. You may wish to set `res = 96` as that will make your Shiny plots match what you see in RStudio as closely as possible.
+
+Plots are special because they are outputs that can also act as inputs. `plotOutput()` has a number of arguments like `click`, `dblclick`, and `hover.` If you pass these a string, like `click = "plot_click"`, they’ll create a reactive input (`input$plot_click`) that you can use to handle user interaction on the plot, e.g. clicking on the plot.
+
+#### Basic reactive programming
+
+The key idea of reactive programming is to specify a graph of dependencies so that when an input changes, all related outputs are automatically updated. This makes the flow of an app considerably simpler, but it takes a while to get your head around how it all fits together.
+
+Shiny apps contain two functions:
+
+- "ui" object: contains the HTML presented to every user of your app. The ui is simple because every user gets the same HTML
+
+- "server" function that acts differently for each user. Each time a new session starts, shiny app invokes a `server()` function and creates a new local environment that is independent from every other invocation. 
+
+#### Server function components
+
+Three parameters (input, output, session) created by shiny app when the session begins:
+
+- input
+
+The input argument is a list-like object that contains all the input data sent from the browser, named according to the input ID.  Input objects are read-only. If you attempt to modify an input inside the server function, you’ll get an error.
+
+```{r}
+ui <- fluidPage(numericInput("count", label = "Number of values", value = 100))
+
+shinyApp(ui, server)
+```
+
+- output
+
+Output is very similar to input: it’s also a list-like object named according to the output ID. The main difference is that you use it for sending output instead of receiving input. You always use the output object in concert with a render function.  The render funciton sets up a special reactive context that automatically tracks what inputs the output uses.  The render function also converts the output of your R code into HTML suitable for display on a web page:
+
+```{r}
+ui <- fluidPage(textOutput("greeting"))
+server <- function(input, output, session) output$greeting <- renderText("Hello human!")
+
+shinyApp(ui, server)
+```
+
+In the shiny app we want inputs coupled with outputs.  Reactive programming maps inputs to outputs.
+
+- session
+
+
+#### Example
+Imagine I want to compare two simulated datasets with a plot and a hypothesis test. The functions below: `freqpoly()` visualizes the two distributions with frequency polygons12, and `t_test()` uses a t-test to compare means and summarizes the results with a string:
+
+```{r}
+library(ggplot2)
+
+freqpoly <- function(x1, x2, binwidth = 0.1, xlim = c(-3, 3)) {
+  df <- data.frame(x = c(x1, x2), g = c(rep("x1", length(x1)), rep("x2", length(x2))))
+  ggplot(df, aes(x, colour = g)) +
+    geom_freqpoly(binwidth = binwidth, size = 1) +
+    coord_cartesian(xlim = xlim)
+}
+
+t_test <- function(x1, x2) {
+  test <- t.test(x1, x2)
+  # use sprintf() to format t.test() results compactly
+  sprintf("p value: %0.3f\n[%0.2f, %0.2f]", test$p.value, test$conf.int[1], test$conf.int[2])
+}
+
+## introduce simulated data
+
+x1 <- rnorm(200, mean = 0, sd = 0.5)
+x2 <- rnorm(200, mean = 0.15, sd = 0.9)
+
+freqpoly(x1, x2)
+cat(t_test(x1, x2))
+```
+
+Use Shiny app to do a bunch of simulations:
+
+```{r}
+## The first row has three columns for input controls (distribution 1, distribution 2, and plot controls). The second row has a wide column for the plot, and a narrow column for the hypothesis test.
+library(shiny)
+library(ggplot2)
+ui <- fluidPage(
+  fluidRow(
+    column(4, # columns
+      "Distribution 1",
+      numericInput("n1", label = "n", value = 1000, min = 1),
+      numericInput("mean1", label = "µ", value = 0, step = 0.1),
+      numericInput("sd1", label = "σ", value = 0.5, min = 0.1, step = 0.1)
+    ),
+    column(4, 
+      "Distribution 2",
+      numericInput("n2", label = "n", value = 1000, min = 1),
+      numericInput("mean2", label = "µ", value = 0, step = 0.1),
+      numericInput("sd2", label = "σ", value = 0.5, min = 0.1, step = 0.1)
+    ),
+    column(4,
+      "Frequency polygon",
+      numericInput("binwidth", label = "Bin width", value = 0.1, step = 0.1),
+      sliderInput("range", label = "range", value = c(-3, 3), min = -5, max = 5)
+    )
+  ),
+  fluidRow(
+    column(9, plotOutput("hist")),
+    column(3, verbatimTextOutput("ttest"))
+  )
+)
+
+## The server function combines calls to freqpoly() and t_test() functions after drawing from the specified distributions:
+
+server <- function(input, output, session) {
+  output$hist <- renderPlot({ #plot output
+    x1 <- rnorm(input$n1, input$mean1, input$sd1) # connecting to inputs from UI
+    x2 <- rnorm(input$n2, input$mean2, input$sd2)
+    
+    freqpoly(x1, x2, binwidth = input$binwidth, xlim = input$range)
+  }, res = 96)
+
+  output$ttest <- renderText({ #text output
+    x1 <- rnorm(input$n1, input$mean1, input$sd1)
+    x2 <- rnorm(input$n2, input$mean2, input$sd2)
+    
+    t_test(x1, x2) # if p value is in confidence interval then they have the same mean, if not, they have different
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+#### Example
+A simpler app that displays a frequency polygon of random numbers drawn from two Poisson distributions.
+
+```{r}
+ui <- fluidPage(
+  fluidRow(
+    column(3, 
+      numericInput("lambda1", label = "lambda1", value = 3),
+      numericInput("lambda2", label = "lambda2", value = 5),
+      numericInput("n", label = "n", value = 1e4, min = 0)
+    ),
+    column(9, plotOutput("hist"))
+  ))
+
+server <- function(input, output, session) {
+  x1 <- reactive(rpois(input$n, input$lambda1))
+  x2 <- reactive(rpois(input$n, input$lambda2))
+  output$hist <- renderPlot({
+    freqpoly(x1(), x2(), binwidth = 1, xlim = c(0, 40))
+  }, res = 96)
+}
+
+shinyApp(ui, server)
+```
+
+

@@ -1,0 +1,116 @@
+---
+title: "Lab 4 Shiny"
+author: "Tiffany Kashima"
+output: html_document
+---
+
+### Lab 4 Shiny App Lab
+
+#### Question 1
+
+The below code sets up a data frame, `df` that you will use in order to create a shiny app that compares the t distribution to the Z distribution at different levels of degrees of freedom (n-1).  Your `n` term will be the input value for your shiny app.
+
+```{r}
+t_dist <- function(n) {
+  x <- seq(-4, 4, by=0.01)
+  norm_dens <- dnorm(x)
+  t_dens <- dt(x, df = n-1)
+  df = data.frame(x = x, z = norm_dens, t = t_dens)
+  ggplot(data=df, aes(x=x, y=z))+
+    geom_line(color="Blue", size=2)+
+    geom_line(data=df, aes(x=x, y=t), size=1.5, color="Red", alpha=.5)+
+    ylab("Density")+
+    xlab("")
+}
+```
+
+Write your code for the shiny app below.  I've set up the UI, Server, and Run steps.  You will fill in the details so that when you run the user interface and server logic together, the output will include:
+
+- Static standard Normal distribution curve in `blue` using ggplot `geom_line()`
+
+- Dynamic t distribution curve that is dependent on degrees of freedom (n-1) in `red` using ggplot `geom_line()`
+
+- A slider input that determines the sample size from minimum value of 2 (since df can be no less than 1) to maximum value of 100, stepping by 1
+
+
+```{r}
+## UI function
+library(ggplot2)
+library(shiny)
+ui <- fluidPage(
+  theme = bslib::bs_theme(bootswatch = "sketchy"),
+  titlePanel("t distribution curve based on n-1 degrees of freedom vs. standard Normal distribution"),
+  fluidRow(
+    column(3, 
+      "Select n:",
+      sliderInput("nDeg", label = "Degrees of Freedom", value = 2, min = 2, max = 100)
+    )
+  ),
+  fluidRow(
+    column(9,
+      "Standard normal distribution in blue and t distribution in red",
+      plotOutput("norm_t"))
+  )
+)
+
+# Server logic
+server <- function(input, output) {
+  thematic::thematic_shiny()
+  n <- reactive(input$nDeg)
+  output$norm_t <- renderPlot({
+      t_dist(input$nDeg)})
+}
+
+## Run shiny app
+shinyApp(ui, server)
+```
+
+
+#### Question 2
+
+Using the `iris` data set, create a scatterplot using the shiny app.  The graph should include some interactive capability to select which variables to compare on the x and y axes.
+
+```{r}
+## UI Function 
+library(shiny)
+library(ggplot2)
+library(dplyr)
+data("iris")
+ui <- fluidPage(
+  theme = bslib::bs_theme(bootswatch = "superhero"),
+  titlePanel("Petal Dimensions with Sepal Length for 3 Types of Irises"),
+    br(),
+    sidebarPanel(
+      selectInput("species", "Select Species:", choices = as.character(unique(iris$Species)))
+    ),
+    br(),
+    br(),
+    mainPanel(
+      dataTableOutput("data"),
+      br(),
+      br(),
+      plotOutput("scatter",width = 800, height = 600)
+    )
+)
+
+## Server logic
+server <- shinyServer(function(input, output) {   
+  species <- reactive({
+    filter(iris, Species==input$species)
+  })
+  output$data <- renderDataTable(
+    species(), options = list(pageLength = 5))
+  
+  output$scatter <- renderPlot({
+    ggplot(species(), aes(x=Petal.Width, y=Petal.Length))+
+      geom_point(colour = "Magenta", alpha = 0.6, aes(size=Sepal.Length))+
+      geom_rug(col="steelblue",alpha=0.5, size=1.5)+
+      xlab("Petal Width") +
+      ylab("Petal Length")
+  })
+})
+
+
+## Run shiny app
+shinyApp(ui, server)
+```

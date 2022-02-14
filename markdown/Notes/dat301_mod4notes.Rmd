@@ -1,0 +1,881 @@
+---
+title: "DAT 301 Module 4 Notes"
+author: "Samantha Tran"
+date: "12/22/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+## 4.1 Ioslides
+
+Create dynamic reports in html or pdf format.
+
+Go to file > new file > R Markdown > Presentation > Html Ioslides
+
+--Fill out YAML part including title, name, date, output (since ioslides the format output will be html)
+
+--Each slide starts with ## and the text in backticks will looks like the font of the code and unlike the header text specified in the beginning.  Add size specification in curly braces (.bigger or .smaller). Can use HTML or CSS for formatting
+
+--If you want to start a page with no title use "---" or ## with {} curly braces with nothing in it. 
+
+--If you use .build you will see each line of code with its output
+
+--When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+--For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+## 4.2 Plotly Part 1
+
+Plotly allows us to make the graphs interactive.
+
+Mode bar on top of plotly plot:
+--snapshot: creates screen caps
+--zoom in
+--autoscale: returns to the original zoom
+--point cursor to fitted line you will see fitted coordinates, cursor towards points you will see the coordinates of the points on plot
+--you can click on the legend to switch on and off the data and the fitted line
+
+
+```{r}
+library(magrittr) ## package for pipe operators
+library(leaflet) ## package for map widgets
+library(plotly) ## install and load plotly package
+```
+
+
+Syntax:
+```{r}
+?plot_ly
+```
+
+
+*Example*:
+Create an interactive scatterplot of the dataset `trees` including the linear regression between the two variables.  Use `Volume` as the response variable and `Girth` as the predictor variable.
+
+First, find the SLR model and name the columns for `Girth` and `Volume` vectors `x` and `y`, respectively.
+
+
+```{r}
+data(trees)
+
+mod <- lm(Volume ~ Girth, data=trees) ## creating the linear regression model
+x <- trees$Girth #specify x and y variables, or can specify dataframe
+y <- trees$Volume
+
+mod
+
+xax <- list(title = "Girth",titlefont = list(family="Modern Computer Roman"))
+yax <- list(title = "Volume", titlefont = list(family="Modern Computer Roman"), range = c(0,80))
+```
+
+Next,
+
+We can use pipe operator to add lines on top of the figure. `fitted()` command will be applied to the object `mod` (the linear regression model created above).  Name the trace as fitted in the key.
+
+We can apply the pipe operator to add layout look specifications that were defined above including title and font and for y axis including the range which will set the range  of the y axis otherwise it would put from minimum of y to maximum of y data.
+
+We can apply the pipe operator to add margin specifications.  The margin is another layout specification. `l` is for left, `r` is for right, `b` for bottom and `t` for top.  The specifications are in pixels.  The actual size of the plot is determined by the initial two commands width and height.  If the original width and height cannot fit, plotly will adjust to accommodate the requirement of the last command.
+
+```{r}
+fitted(mod) # gives y hat values for x for prediction equation
+fig <- plot_ly(x=x, y=y,
+               type="scatter", 
+               mode="markers", 
+               name="data", # name of data markers
+               width=800, # in pixels
+               height=430) %>%
+  add_lines(x=x, y=fitted(mod), name="fitted") %>% # fitted takes the saved lm model as argument
+  layout(xaxis=xax, yaxis=yax) %>% # axis take saved formatting
+  layout(margin=list(
+    l=150,
+    r=50,
+    b=20,
+    t=40))
+config(fig, displaylogo=FALSE) ## remove the plotly logo in upper right ribbon of display
+```
+
+
+*Exercise*:
+Using `plot_ly()` and the `Orange` dataset, plot the age (`age`) of orange trees vs. their circumferences (`circumference`) as a scatterplot with "markers = `lines`" that are color-coded based on the tree (`Tree`).  Which tree seems to grow the most?
+
+```{r}
+data(Orange)
+fig1 <- plot_ly(Orange, x= ~age, y= ~circumference, # use tilda to reference columns from data frame
+               type="scatter", 
+               mode="lines", 
+               color = ~Tree, #colors based on tree type
+               width=800, # in pixels
+               height=430) %>%
+  add_markers(color = ~Tree) #add markers to lines
+fig1
+```
+
+
+## 4.3 Plotly Continued
+
+*Example*:
+Plot `Mpg` vs. `wt` from dataset `mtcars` with the color based on displacement variable.
+
+-- Notice that higher displacement corresponds with larger distance and larger car, which corresponds with larger weight and lower miles per gallon.  So the data has a negative linear relationship and the colors move from upper left to bottom right in a linear fashion.
+
+```{r}
+library(dplyr)
+data(mtcars)
+head(mtcars)
+
+pal <- c("Magenta", "Goldenrod", "Blue")
+pal <- setNames(pal, c("4", "6", "8"))
+
+xax <- list(title="Weight", mtitlefont = list(family = "Modern Computer Roman")) # this is optional but looks cleaner doing specifications for axes outside of the function
+yax <- list(title="Miles per Gallon", titlefont = list(family = "Modern Computer Roman"))
+
+plot_ly(data=mtcars, ## data
+        x= ~wt, ## x variable (attached name so variable can be referenced)
+        y= ~mpg, ## y variable
+        type="scatter",
+        mode="markers",
+        size=~hp,
+        #color= ~disp) %>% ## distance from upper position of piston in cylinder to lowest position
+                          ## displacement is a conatinuous variable so the color is based on color wheel/gradient
+                          ## TYPE as.factor to force variable you are basing color on to use discrete color scheme instead
+                          ##  of continuous
+        color = as.factor(mtcars$cyl), # based color of marker on cylinders as discrete
+        colors = pal) %>% #color palette specified in vectors above
+layout(xaxis=xax, yaxis=yax)
+```
+
+
+*Example*:
+Graph has:
+
+-- Color based on the number of cylinders (`cyl`) converted into a factor (only 3 factors instead of a gradient)
+
+-- Size of the marker based on horsepower (`hp`) (the larger the circle the larger the horsepower) with the center of the circle representing the weight and mpg coordinate.
+
+```{r}
+data(mtcars)
+plot_ly(data = mtcars,
+        x = mtcars$wt,
+        y = mtcars$mpg,
+        type = "scatter",
+        mode = "markers",
+        color = ~cyl,
+        size = mtcars$hp,
+        width = 600,
+        height = 350) %>%
+  layout(xaxis = xax,
+         yaxis = yax)
+```
+
+
+*Example*:
+3d scatterplot.  Specify x, y, and z coordinates:
+
+- X ~ N(mu = 30, sigma^2 = 5^2)
+
+- Y ~ N(0, 1)
+
+- Z ~ N(mu = 15, sigma^2 = 2^2)
+
+- `color` = Z; i.e. the higher the dot the more yellow the dot the lower the darker blue.
+
+```{r}
+set.seed(123)
+myX <- rnorm(100, mean=30, sd=5)
+myY <- rnorm(100)
+myZ <- rnorm(100, mean=15, sd=2)
+plot_ly(x=myX,
+        y=myY,
+        z=myZ,
+        type="scatter3d",
+        mode="markers",
+        color=myZ) %>%
+  hide_colorbar()
+```
+
+
+*Exercise*:
+Using a 3d scatterplot in `plotly`, plot `diamonds` data, using the diamond's lenght (`x`) as the x-axis, width (`y`) as the y-axis and price (`price`) as the z axis.  Colorise the markers based on the diamond's clarity (`clarity`).
+
+Work Best with CONTINUOUS data, otherwise going to get a setpwise function
+
+```{r}
+head(diamonds)
+data(diamonds)
+plot_ly(data = diamonds, x=~x,
+        y=~y,
+        z=~price,
+        type="scatter3d",
+        mode="markers",
+        color=~clarity) %>%
+  hide_colorbar()
+```
+
+
+*Example*:
+Plots of `f(x, y) = sin(x + 1) + y^2` and plane `f(x, y) = 0.6x + 0.8` with the contours projected on `(x, y)` plane.
+
+```{r}
+x <- seq(-6, 6, by = 0.05) #parameters to pass into meshgrid
+y <- seq(-2, 2, by = 0.05)
+
+## creating meshgrid of (x,y) points
+X <- matrix(rep(x, length(y)),
+            nrow=length(y),
+            byrow=TRUE)
+Y <- matrix(rep(y, length(x)),
+            ncol = length(x),
+            byrow = FALSE)
+
+## creating a surface Z = f(X,Y)
+Z <- sin(X+1) + Y^2 # put in f(x,y) function for z
+
+## creating a plane
+Zp <- 0.6*X + 0.8
+
+fig <- plot_ly(x=X, y=Y, z=Z,
+               showscale=FALSE, ## hides the colorbar
+               width=800,
+               height=550) %>%
+  add_surface(contours=
+                list(z=list(show=TRUE,
+                            usecolormap=TRUE,
+                            highlightcolor="#ff0000",
+                            project=list(z=TRUE)) ## command to give the contours/projections of z levels
+                     )
+              )
+fig <- fig %>% layout(list(
+  scene=list(camera=list(eye=list(x=1.87, y=0.88, z=-0.6))))) ## specifies camera position
+
+fig <- fig %>% add_surface(z=Zp) ## add the plane to the plot
+
+fig
+```
+
+
+*Exercise*:
+First, find the average weight change at the different times recorded per diet using `dplyr`.  Call this new dataframe `df`.  Then, using `plotly`, plot the average weight gain against the time in an interactive line plot.  Make the color of the line unique based on the diet.
+
+```{r}
+df<-ChickWeight %>%
+  group_by(Diet, Time) %>% # different times per diet
+  summarise(avg_wt_chg = mean(weight))
+df
+fig2 <- plot_ly(df, x= ~Time, y= ~avg_wt_chg, # use tilda to reference columns from data frame
+               type="scatter", 
+               mode="lines", 
+               color = ~Diet, #colors based on tree type
+               width=800, # in pixels
+               height=430)
+fig2
+```
+
+
+**4.5 ggplot2 Introduction**
+
+
+##### Reference:
+
+- Hadley Wickham, ggplot2: Elegant Graphics for data analysis <https://ggplot2-book.org/>
+
+- <https://www.learnbyexample.org/r-bar-plot-ggplot2/>
+
+- ggplot2 cheat sheet
+
+
+##### gg:
+gg stands for "Grammar of Graphics," based on Leland Wilkinson's idea that plot should be structured according to certain rules, like a sentence according to grammar.
+
+
+##### Every ggplot2 plot has three key components: data, aestetic mappings and layers.
+
+(1) data
+
+The first argument in ggplot() function is to specify the data set (i.e.d ata frame, table, tibble, etc.) to present in the plot.
+
+ (2) aesthetic mappings
+
+Each plot needs at least one set of aesthetic mappings between the variables in the data and visual properties.  The naem "aesthetic mapping" may sound confusing but just means you tell ggplot which variables from the chosen data set will be used and how.  Typically you use the function aes() wtihin ggplot() to specify the role of each variable used in the plot.
+
+Parameters:
+
+-- `x` for variable on x-axis
+
+-- `y` for variable on y-axis
+
+-- `color` (or "colour") for variable represented by color of points/markers (if categorical you will have different colors; if numerical you will have different shades on a gradient)
+
+-- `shape` for (categorical) variable represented by shape of markers (different categories have different shapes)
+
+-- `size` for variable represented by size of markers (larger value has larger marker size)
+
+
+(3) layers
+
+At least one layer is required, which describes how to render each observation.  Layers are often created with a function whose name starts with geom_.  For example:
+
+-- `geom_point()`: for scatterplots
+
+-- `geom_line()`: for curves (connected dots)
+
+-- `geom_smooth()`: for fitted lines/curves
+
+-- `geom_histogram()`: for frequencies of numerical values
+
+-- `geom_bar()`: for frequencies of categorical variables
+
+Note: Behaves like `plot_ly()`, `trace` and in base R `points()` and `abline()`.  First you identify the data and then you add points or lines as a layer above the base.
+
+
+*Example*:
+Trees data set to explain the three components of grammar of graphics.
+
+First, specify where the data comes from using `data =` component.  Then add aesthetic mappings (identify x and y vars).  Add the `geom_point()` to the top layer.  Name this graph `g`.
+
+After you have the basic scatter plot, add in the linear regression line to the named graph `g`.  You can modify the line range by specifying `coord_cartesian()` function to specify y limits.
+
+```{r}
+library(ggplot2)
+g <- ggplot(data = trees, aes(x = Girth, y = Volume)) + geom_point(); g # use aes to specify variables, +geom_points to add data points, g is where to get data from
+g + geom_smooth(method = "lm") + coord_cartesian(ylim = c(0, 80)) # added linear model regression line to graph in another layer
+# change limits of axis as necessary 
+```
+
+In the above graphs, we  see the grey band around the blue line which is a 95% confidence band. Remember: the y coordinate on the line is our expected y for a given x.  The expected value for all outputs for given x is that point on the regression line.  
+
+The grey band cross-section shows a 95% confidence interval for each expected y value for inputs of x.  This means we are 95% confident that the true expected y value for a given x value is in that region.  i.e. if we repeated this experiment many times with new samples and corresponding intervals, 95% of the confidence interval contain the true value of the expected value of y for the given x.
+
+The R default is to show 95% confidence interval but can change the level with parameter: `level =`.  The 99% is interval is wider than the 95% bands since we are more certain that the true expected y value is in that range.  Notice that the bands are narrowest when the true y values are closer to the line.
+
+```{r}
+## change confidence level
+g + geom_smooth(method = "lm", level = 0.99) + coord_cartesian(ylim = c(0, 80))
+
+## remove the confidence bands by specifying standard error se=FALSE
+g + geom_smooth(method = "lm", se = FALSE) + coord_cartesian(ylim = c(0, 80))
+
+## remove default grey background and replace with white background
+g + geom_smooth(method = "lm", se = FALSE) + coord_cartesian(ylim = c(0, 80)) + theme_bw()
+```
+
+*Exercise*:  Using `diamonds` from the `ggplot2` package.  
+We want to plot `carat` as the independent variable with `price` price as the dependent variable.  We also want the point's color based on the `clarity` of the diamond.
+Add the linear regression equation with 90% confidence bands to the above plot mapping `carat` to `price`.  Do you think this graph accurately predicts price?
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+display.brewer.all(colorblindFriendly = TRUE) # display palettes
+display.brewer.pal(n=8, name = "Spectral") # display specific palette with specific number of colors
+dplot <- ggplot(data = diamonds, aes(x = carat, y = price, color = clarity)) + geom_point() 
+dplot + scale_color_brewer((palette = "Spectral")); dplot #when using Color Brewer, must be on its own line!
+dplot + geom_smooth(method = "lm", level = 0.90) + coord_cartesian(ylim = c(0, 20000)) # linear regression lines with 90% CI
+# method = can be a variety of modeling methods, can look them up
+?geom_smooth
+```
+
+
+## 4.6 ggplot2 Five Aesthetics
+
+Representing more than 2 variables in a plot (up to 5).
+
+*Example*:
+`airquality` dataset.  Data on variables ozone, solar radiation, wind, temperature, month and day from months May - September.
+
+Use function `recode_factor` in `dplyr` to change the month numbers to names.  The create a dataset `air` with the columns `Ozone`, `Solar.R`, `Wind`.  Append column `month` to your dataset to describe the month.  Delete NA observations in `Ozone` and `Wind`
+
+Then, plot `Ozone` against `Wind` using `ggplot()`.
+
+```{r}
+library(dplyr)
+
+month <- recode_factor(airquality$Month, '5'="May", '6'="June", '7'="July", '8'="August", '9'="September") # Rename factorsr
+air <- airquality[, c("Ozone", "Solar.R", "Wind")] # create new dataframe from column selection
+air$Month <- month # add month column
+air <- air[!is.na(air$Ozone) & !is.na(air$Wind),] # remove NAs from specific columns
+head(air)
+
+ggplot(data = air, aes(x = Ozone, y = Wind)) +
+  geom_point() ## no need to specify geom_point() as we only have 2 in aes() 
+```
+
+
+##### Plot with 3 variables
+
+In the below, we use *polynomial* and *loess* function to model `Wind` and `Ozone` to match the curve-linear trend.  For the polynomial graph we used 2nd degree (quadratic polynomial).  Might use 3rd degree but it's harder to interpret.  The locally estimated scatterplot smoothing (loess) might be preferred without the last inflection. Make sure the fit line really measures the data relationship when using quadratic (not too many degress-- can cause overfitting).  Loess is try to use the best fit. 
+
+```{r}
+ggplot(data = air, aes(x = Wind, y = Ozone, color = Month)) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") + # se shows confidence intervals, set level to control
+  geom_point(alpha = 0.5) + coord_cartesian(ylim = c(0, 175)) # can add as many geom_point as needed
+
+## polynomial function (blue) and loess function (red)
+g <- ggplot(air, aes(x=Wind, y=Ozone, color=Month)) + # stat_smooth allows for better fitting using different methods
+  geom_point(alpha=1/2) +
+  stat_smooth(method="lm", 
+              se=FALSE, 
+              fill=NA,
+              formula=y ~ poly(x, 2), # the formula for fitted line can be exponential with poly, logarithmic with log
+              color="blue") +
+  stat_smooth(method="loess", # can add more smooth regression lines in this manner
+              se=FALSE,
+              color="red")
+g
+```
+
+##### Represent 4 variables in a plot; size corresponds to size of solar radiation numeric size.
+Notice the warning that 5 rows were removed since Solar.R was NA there.
+
+```{r}
+ggplot(air, aes(x = Wind, y = Ozone, color = Month, size = Solar.R)) + # Solar.R represents the size of the dot by month
+  geom_point(alpha = 1/2, shape = air$Month) + # changed points shaped by month
+  geom_smooth(method = "lm", se = FALSE, formula = y ~ poly(x,3), color = "blue")
+```
+
+
+##### Represent 5 variables (this is the max variables).  5th variables will be represented using shape of the point.
+
+*Example*:
+Create a plot for `diamonds` dataset.  Visualize `carat` on the x-axis and `price` on the y-axis.  Color the points based on `color` of the diamond, the size of the point on the `clarity` of the diamond, and the shape of the point on the `cut`.  Make the opacity 50%.
+
+```{r}
+head(diamonds)
+ggplot(data=diamonds, aes(x=carat, y=price, color=color, size=clarity, shape=cut)) +
+  geom_point(alpha=1/2)
+```
+
+
+*Exercise*:
+Create a plot for `iris` dataset.  
+
+First, mutate the `iris` dataset so that there is a column for `Size` that records "small" if the `Petal.Width` is less than or equal to 1.5 and "large" otherwise.
+
+Then, visualize `Sepal.Length` on the x-axis and `Petal.Length` on the y-axis.  Color the points based on `Species` of the iris, the size of the point on the `Sepal.Width` of the iris, and the shape of the point on the `Size`.  Make the opacity 50%.
+
+```{r}
+iris2 <- iris %>%
+  mutate(Size = ifelse(Petal.Width <= 1.5, "Small", "Large")) # Use mutate to add Size column based on if else statement existing column variable in dataset, create response factor for petal.width
+iplot <- ggplot(data = iris2, aes(x = Sepal.Length, y = Petal.Length, color = Species, size = Sepal.Width, shape = Size))+
+  geom_point(alpha = 0.5)+
+  scale_color_brewer(palette = "Dark2")
+iplot
+```
+
+##### ggplotly
+
+Make ggplots interactive using ggplotly() function.
+
+```{r}
+library(dplyr)
+library(plotly)
+month <- recode_factor(airquality$Month, '5'="May", '6'="June", '7'="July", '8'="August", '9'="September")
+air <- airquality[, c("Ozone", "Solar.R", "Wind")]
+air$Month <- month
+air <- air[!is.na(air$Ozone) & !is.na(air$Wind),]
+g <- ggplot(air, aes(x=Wind, y=Ozone, color=Month)) +
+  geom_point(alpha=1/2) +
+  stat_smooth(method="lm", 
+              se=FALSE, 
+              fill=NA,
+              formula=y ~ poly(x, 2), 
+              color="blue") +
+  stat_smooth(method="loess", 
+              se=FALSE,
+              color="red")
+
+ggplotly(g) %>% # call ggplotly with the stored ggplot object as argument
+  layout(margin=list(l=50, t=50)) # sets left and top margin in pixel units
+```
+
+*Exercise*:
+Render the graph for the `iris` data interactive.
+
+```{r}
+ggplotly(iplot) # make sure you save the ggplot to a variable to use here
+```
+
+
+## 4.7 ggplot2 - Barplots, Subplots, TSLA
+
+##### Bar Plot in ggplot2 
+
+*Example*: 
+Use geom_bar to tell ggplot what layer to plot, specified with the count of each class being measured on the y axis.  The fill of the bar will be steelblue and the width of the bar 0.7 pxls.  The theme `minimal` has light background with grids.
+
+Much easier to plot bar graphs in ggplot than in base R
+
+Make sure bars touch for continous data (histogram) and do not touch for discrete data or categorical data
+
+```{r}
+library(ggplot2)
+head(mpg)
+ggplot(data = mpg, aes(x = class)) + 
+  geom_bar(stat = "count", width = 0.7, fill = "steelblue") + # Use statistic "count" for bar graph
+  theme_minimal() 
+```
+
+
+The following bar plots are variations on the theme from https://www.learnbyexample.org/r-bar-plot-ggplot2/
+
+*Example*:
+Aesthetics (`aes()`) include x- and y- axes plus color.  `geom_bar` specifies the bar layer.  The input for `stat`, `identity`, means that the heights of the bars will be measured based on the y aesthetics specified in `aes()`.
+
+```{r}
+survey <- data.frame(fruit=c("Apple", "Banana", "Grapes", "Kiwi", "Orange", "Pears"), people=c(40, 50, 30, 15, 35, 20))
+survey
+ggplot(survey, aes(x = fruit, y = people, fill = "red")) +
+  geom_bar(stat = "identity") # identity makes heights of bars based on y in aes arguments
+```
+
+
+*Example*:
+`fill` is based on the category of the variable fruit.  Included axis labels.  Also include "Plotlyfication" of the fruit bar plot after the creation in ggplot2 so that you can hover curser over various bars and see more details easily.  Notice that "fruit" shows twice:  once for x- variable and once for color.
+
+```{r}
+g <- ggplot(survey, aes(x = fruit, y = people, fill = fruit)) + # store to variable to use in ggplotly()
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(face = "bold", color = "#993333", size = 12, angle = 60, hjust = 0.8)) # change x labels for the bars: angle, color, text bolding, size, etc
+
+library(plotly)
+
+ggplotly(g) %>%
+  layout(margin = list(l = 150, t = 60)) %>%
+  config(displaylogo = FALSE) # turns off plotly logo
+```
+
+
+*Two plots in one figure (OVERLAY)*
+In the following figures we plot Tesla stock price (ticker/symbol: TSLA) at the closing of each day from a year ago until the moment this file was last rendered (July 24 2020).  We also plot the histogram of daily volume, i.e. number of shares that changed their owner in each day in the last 365 days.
+
+
+*Example*:
+The two graphs (time series line graph of daily price (tidyquant library to deal with financial time series data) and the histogram of daily volume) are in the sample plot.  The code is flexible in the sense that if you only change the ticker.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(tidyquant) ## package used to get and manipulate financial time xseries data
+
+AAPL <- tq_get("AAPL", from = "2020-01-01", to = "2021-01-01") # get stock data from certain dates using tidyquant
+
+g <- ggplot(data = AAPL, aes(x = date, y = close)) + #plot line
+  geom_area(data = AAPL, aes(y = volume/10^7), alpha = 0.7) + # using filled volume graph not points, scale volume for graph so its looks appropriate visually
+  theme_bw() + #bw theme
+  geom_line(color = "darkgreen") + # color for line plot
+  xlab("Date") + # do need to use SAME AXES for both plots in overlay mode
+  ylab("Close")
+ggplotly(g) # make interactive
+```
+
+
+*Example*: candlestick plots from `tidyquant` package
+What Is A Candlestick?
+A candlestick is a type of price chart used in technical analysis that displays the high, low, open, and closing prices of a security for a specific period. It originated from Japanese rice merchants and traders to track market prices and daily momentum hundreds of years before becoming popularized in the United States. The wide part of the candlestick is called the "real body" and tells investors whether the closing price was higher or lower than the opening price (black/red if the stock closed lower, white/green if the stock closed higher).
+
+```{r}
+ggplot(data = AAPL, aes(x = date, y = close)) +
+  geom_candlestick(aes(open = open, high = high, low = low, close = close)) +
+  geom_ma(color = "darkgreen") # moving average for data, check out documentation!
+```
+
+
+*Example*: Subplots
+In this example, the graphs (time series line graph of daily price and the histogram of daily column) are in two separate subplots of the same figure, vertically aligned
+
+```{r}
+library(cowplot) ## package used to create subplots
+
+g1 <- ggplot(data = AAPL, aes(x = date, y = close)) +
+  geom_line(color = "darkgreen") +
+  theme_bw() +
+  xlab("Date") +
+  ylab("Close")
+
+g2 <- ggplot(data = AAPL, aes(x = date, y = close)) +
+  geom_area(data = AAPL, aes(y = volume/10^7), alpha = 0.7) +
+  xlab("Date") +
+  ylab("Volume")
+
+plot_grid(g1, g2, labels = c('Moving Price', 'Moving Volume'), label_size = 12) # create grid of subplots
+```
+
+
+*Exercise*:
+Using the `iris` dataset, create scatterplot measuring `Sepal.Length` (x-axis) versus `Sepal.Width` (y-axis).  Create subplots based on the `Species`.
+
+```{r}
+i1 <- iris %>%
+  filter(Species == "setosa") # use dplyr filter to specify species
+i2 <- iris %>%
+  filter(Species == "versicolor")
+i3 <- iris %>%
+  filter(Species == "virginica")
+
+g1 <- ggplot(data = i1, aes(x=Sepal.Length, y = Sepal.Width, color = I("Red")))+
+  geom_point()+
+  theme_bw()
+g2 <- ggplot(data = i2, aes(x=Sepal.Length, y = Sepal.Width, color = I("Blue")))+
+  geom_point()+
+  theme_bw()
+g3 <- ggplot(data = i3, aes(x=Sepal.Length, y = Sepal.Width, color = I("Green")))+
+  geom_point()+
+  theme_bw()
+
+plot_grid(g1,g2,g3, labels = c("setosa", "versicolor", "virginica"), label_size = 10)
+```
+
+
+## 4.8 ggplot2 - Log scale, Facetting, Maps
+
+
+##### Logarithmic scale
+If you have a very wide range of value so that smallest and largest values differ by several orders of magnitude you may want to use logarithmic scale so that x- and y-axis you use `scale_x_log10()` to scale x-axis and `scale_y_log10()` to scale the y-axis.  Good for extreme points when you have a big different in observtions (elephant versus mouse in this dataset) but removing them as outliers isnt a good idea for dataset.  Do analysis with log data and then explain it by squaring back to original data.
+
+*Example*:
+There is a large range in bodyweight and brainweight  of animals in the `msleep` dataset since the smallest animal is a shrew and largest is an elephant.  We can find logs for both x (brainweight) and y (bodyweight) and graph those values.
+
+```{r}
+library(ggplot2)
+head(msleep)
+
+g <- ggplot(data = msleep, aes(x = brainwt, y = bodywt)) +
+  scale_x_log10() +
+  scale_y_log10()
+
+## add scatterpoints to g
+
+g + geom_point(aes(color = vore)) +
+  scale_color_manual(values = c(carni = "red", herbi = "orange", insecti = "green", omni = "blue"), na.value = "grey50")
+```
+
+*Facetting*
+Faceting is when you split data into several panels, usually according to certain rule(s) or some categorical variable.  After you facet the data, you can plot each category in a single panel.  Function:  `facet_wrap()`.
+
+*Example*:
+Use `facet_wrap(~cyl)` which means "By cylinder."  The `geom_jitter()` is like the `geom_point()` scatterplot option but wiggles all the data a little randomly.  This is convenient when we have discrete random variables and lots of concentration at certain places.  This jittering allows us to understand the relationship a bit more as it decreases the misleading affect of overall position of the data.  Could also do a bubble graph for size as counts of each discrete data.
+
+```{r}
+p <- ggplot(mpg, aes(cty, hwy)) +
+  geom_jitter(width = 0.1, height = 0.1)
+p + facet_wrap(~cyl) # facet wrap based on cylinder - a discrete variable
+```
+
+Note:  Facetting is an alternative to using aesthetics (like color, shape, or size) to differentiate groups.  Both techniques have strengths and weaknesses based around the relative position of the subsets.  With facetting, each group is quite far apart in its own panel so there is no overlap.  This is good if the groups overlap a lot so that small differences are hard to see.  When using aesthetics to differentiate groups, the groups are close together and may overlap but small differences are easier to see.
+
+
+*Example*:
+Create a df with columns x, y, and z such that the x and y values represent random observations from Normal distributions and a vector z of letters `A`, `B`, and `C`.  Then graph this data with `x` on x-axis and `y` on y-axis, using categorical variable `z` for color-coding.  Create a second graph of the same type as the first but add a facet wrap based on categorical variable `z`.
+
+```{r}
+df <- data.frame(
+  x = rnorm(180, c(0, 2, 4)), # creates normal distribution randomly generated based on mean of 0,2,4
+  y = rnorm(180, c(1, 2, 1)), # data cylcles through different means
+  z = letters[1:3])
+head(df,8)
+
+## group by color
+ggplot(data = df, aes(x = x, y = y)) +
+  geom_point(aes(color = z), size = 2, alpha = 0.5) # color based on z
+
+## facetting by variable z (categorical values a, b and c)
+ggplot(data = df, aes(x = x, y = y)) +
+  geom_point(aes(color = z)) +
+  facet_wrap(~z) # spearated out by a, b, c
+```
+
+*Example Cont.*:
+Using `dplyr`, add the group means per panel in the facetted graph.  This can allow you to compare locations of each group in each panel.
+
+```{r}
+library(dplyr)
+df_sum <- df %>%
+  group_by(z) %>%
+  summarise(x = mean(x), y = mean(y)) %>%
+  rename(z2 = z)
+ggplot(data = df, aes(x = x, y = y)) +
+  geom_point() +
+  geom_point(data=df_sum, aes(color = z2), size = 4) + # adding a point based on df_sum
+  facet_wrap(~z) # compare each of the faceted groups to the means of each group for comparison
+```
+
+*Example Cont.*:
+Use the above graph but include coloring change so that each panels have all (x, y) combinations but only one facetted group is colorized.  **This is super cool**
+
+```{r}
+df2 <- dplyr::select(df, -z) # data without z because we are going to facet it
+ggplot(data = df, aes(x = x, y = y)) +
+  geom_point(data = df2, color = "grey80", size = 2, alpha = 0.4) + #entire data set without z
+  geom_point(data = df, aes(color = z), size = 2) + # color based on z on original dataset
+  facet_wrap(~z) # facetted based on z
+```
+
+
+*Exercise*:
+The `Puromycin` data frame has 23 rows and 3 columns of the reaction velocity (`rate`) versus substrate concentration (`conc`) in an enzymatic reaction involving untreated cells or cells treated with Puromycin.  Construct a scatterplot using `rate` as the independent variable, `conc` as the dependent variable, and facet on `state`.
+
+```{r}
+Puromycin
+pur_plot <- ggplot(Puromycin, aes(rate, conc)) +
+  geom_point() +
+  facet_wrap(~state)
+pur_plot
+```
+
+
+##### Maps
+
+*Example*:
+The data represents arrest rates per 100,000 people. For example, in AZ `murder = 8.1` means there are 8.1 arrests for murder per 100,000 people.
+
+```{r}
+library(maps)
+library(plotly)
+library(RColorBrewer)
+head(USArrests)
+df <- data.frame(murder = USArrests$Murder, state = tolower(rownames(USArrests)))
+
+map <- ggplot2::map_data("state") #use one vector for map data from dataset
+
+states <- data.frame(long = state.center$x, lati = state.center$y, abb = state.abb) #pulled from mapa_data to create map of states, gives longitude and longitude for each state in dataframe
+
+m <- ggplot(data = df, aes(fill = murder)) +
+  geom_map(aes(map_id = state), map = map) + #map_id takes state vector
+  geom_text(aes(label = states$abb, x = states$long, y = states$lati), color = "white") + # puts name in the middle of the state based on long/lat
+  expand_limits(x = map$long, y = map$lat) # so you can see the entire map guaranteed
+
+ggplotly(m) %>%
+  layout(xaxis = list(title = ""), yaxis = list(title = ""))
+```
+
+
+*Example*:
+Using package = "maps", plot `canada.cities`.  Add points to the coordinates that represent the population size of that city with the hover text showing the name of the city and the size of the population.
+
+```{r}
+data(canada.cities, package="maps")
+p <- ggplot(canada.cities, aes(long, lat)) +
+        borders(regions="canada", name="borders") +
+        coord_equal() +
+        geom_point(aes(text=name, size=pop), colour="red", alpha=1/2, name="cities")
+
+fig <- ggplotly(p)
+
+fig
+```
+
+*Exercise*:
+Using `plot_usmap()` function from `usmap` package and the dataset `USArrests`, plot the number of assaults per state (`Assault`) in the US.  Include a continuous scale on the right side of the graph that colorizes the state based on the assault value.  Include the state abbreviation in white.  Run the map through `ggplotly()` to make it interactive.
+
+```{r}
+df_ast <- data.frame(assault = USArrests$Assault, state = tolower(rownames(USArrests)))
+map <- ggplot2::map_data("state")
+states <- data.frame(long = state.center$x, lati = state.center$y, abb = state.abb)
+m <- ggplot(data = df_ast, aes(fill = assault)) +
+  geom_map(aes(map_id = state), map = map) + 
+  geom_text(aes(label = states$abb, x = states$long, y = states$lati), color = "white") +
+  expand_limits(x = map$long, y = map$lat) 
+
+ggplotly(m) %>%
+  layout(xaxis = list(title = ""), yaxis = list(title = ""))
+```
+
+
+## 4.9 Animation
+
+##### Animation package
+Creating frames and putting them into a movie.
+Reference: <yihui.org/animation/examples>
+
+```{r}
+library(gifski)
+```
+
+##### Saving animation:
+Use `saveHTML()`, `saveGIF()` or `saveVideo()` functions from an animation package to save your animation in a desired format.
+
+For example, function `saveHTML()` first records all the plots in the R expression as bitmap images, then inserts them into an HTML page and finally creates the animation using the `SciAnimator` library.
+
+##### Animation in HTML from Rmd
+In order to embed animation into an HTML file produced by Rmd, you can use chunk option (inside {r}) `animation.hook = "gifski"` which creates a gif file that consists of the sequence of nmax frames and gif image format supports image sequencing into a frame.  By default, the gif file is stored in the folder automatically created in the directory where your Rmd file is.  The alternative is to install ffmpeg software and instead of animation hook, use the chunk `fig.show = "animate"`.
+
+
+*Example*:
+Use `conf.int()` which is one of the functions within the animation package to show a simulation of confidence intervals.  The default confidence level is 95%.  We will create 100 confidence intervals and the grey and red bars are actually our confidence intervals.  The values that are red do not contain mu (population mean).  
+
+Remember: Confidence interval means if you were to take samples over and over again and for each sample you compute confidence interval, C% of the confidence intervals will contain the true value of the population mean.
+
+Knit to HTML to see animation
+
+```{r, animation.hook = "gifski"}
+library(animation)
+ani.options(interval = 0.2, max = 100)
+sample_size <- 50
+conf.int(level = 0.9, size = sample_size,
+         main = paste("Simulation of", ani.options()$nmax,
+                    "Confidence intervals \nEach sample size: n = ", sample_size))
+```
+
+
+*Example*:
+Simulating Brownian motion.
+
+```{r, animation.hook = "gifski"}
+library(animation)
+set.seed(123)
+n <- 10
+x <- rnorm(n)
+y <- rnorm(n)
+
+ani.options(nmax=50)
+for (i in seq_len(ani.options("nmax"))) {
+  dev.hold()
+  plot(x, y, xlim=c(-20, 20), ylim=c(-20,20), col=1:n, pch=19, cex=2)
+  x = x+rnorm(n) #adds random wiggle to point
+  y = y+rnorm(n)
+  ani.pause()
+}
+```
+
+
+##### Animation in PDF
+You can have an animation in PDF.  This is done the same way as html except that in the code chunk options instead of `animation.hook = "gifski"` you should have `fig.show = "animate"`.
+
+Also in the chunk options, you can put `aniopts = "<some options>"` where in between quotation marks you can put autoplay for animation to start automatically upon entering the pdf file, controls for including user control buttons, loop for infinite loop (unless user stops the loop).  If you want to use more than one of these options, separate them by commas.
+
+
+##### gganimate package
+Package that uses ggplot tool and creates frames from ggplot2 plots.
+
+
+*Example*:
+Using `gapminder` package dataframe `gapminder`.  To include the animation in html output form you can include syntax for including images (not in a code chunk).  For example, `gapmdr.gif` file created in the previous slide is included in this (html) slide by typing:
+
+![](gapmdr.gif)(width="800", height="170")
+
+We will plot life expectancy based on gdp per capital for each country grouped country by continents and the frames will be created year by year.
+
+```{r setup}
+library(gganimate)
+library(gapminder)
+library(ggplot2)
+
+head(gapminder)
+
+gapmdr <- ggplot(data=gapminder,
+                 aes(x=gdpPercap, y=lifeExp, size=pop, color=country)) +
+  geom_point(show.legend=FALSE, alpha=0.7) +
+  scale_color_viridis_d() +
+  scale_size(range=c(2,12)) +
+  scale_x_log10() +
+  labs(x="GDP per capita", y="Life Expectancy")
+
+## use facet_wrap() to create multiple frames by continent
+## transition time will make the antimation by certain variable
+## labs function for labels
+gapmdr <- gapmdr + facet_wrap(~continent, nrow=1) +
+  transition_time(year) + 
+  labs(title="Year: {frame_time}")
+```

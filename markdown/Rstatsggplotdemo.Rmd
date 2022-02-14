@@ -1,0 +1,181 @@
+---
+title: "Lab 3B"
+author: "Tiffany Kashima"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+You will want to load `ggplot2` and `dplyr` to manipulate and visualize the data.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(tidyr)
+library(viridis)
+library(RColorBrewer)
+library(cowplot)
+```
+
+### Requirements:  
+
+- For the following questions, answer using `dplyr` and `ggplot2` and `plotly`.
+
+- Include both a knitted html output and the Rmarkdown file for your submission to Canvas.
+
+
+### Data
+
+The lab's questions will include data from the Rugby 2015 World Cup.
+
+```{r}
+rugby_data = read.csv("~/ASU/DAT301/data/rubgyworldcup2015.csv", sep = ",", header = TRUE)
+```
+
+
+
+### Quesiton 1
+
+Remove all NA values in the `rugby_data` dataset.  Create a third categorical variable that categorizes the team country by continent:
+
+- Americas: Canada, USA, Argentina, Uruguay
+- Europe: England, France, Ireland, Italy, Romania, Scotland
+- Asia: Georgia, Japan, 
+- Oceania: Australia, Fiji, New Zealand, Samoa, Tonga
+- Africa: Namibia, South Africa
+
+Use this variable as the x-axis label.  Using `ggplot2`, create faceted bar graphs.  On the left bar graph plot the average height per team per continent and on the right bar graph plot the average weight per team per continent.  Colorize based on team.  Give your graphs titles, label x- and y-axes, and label the bar based on its value.  After your graph, include a write-up describing any conclusions based on the visualization.
+
+```{r}
+head(rugby_data)
+df <- rugby_data %>%
+  mutate(team_country = case_when(team %in% c("Canada","USA","Argentina","Uruguay") ~ 'Americas',
+                                  team %in% c("England","France","Ireland","Italy","Romania","Scotland") ~"Europe",
+                                  team %in% c("Georgia","Japan")~"Asia",
+                                  team %in% c("Australia","Fiji","New Zealand","Samoa","Tonga")~"Oceania",
+                                  team %in% c("Namibia","South Africa")~"Africa")) %>%
+  na.omit()
+df
+df1 <- df %>%
+  na.omit() %>%
+  relocate(team_country, .after = team) %>%
+  group_by(team,team_country) %>%
+  summarize(avg_height = mean(height_cm))
+df1
+
+df2 <- df %>%
+    na.omit() %>%
+  relocate(team_country, .after = team) %>%
+  group_by(team,team_country) %>%
+  summarize(avg_weight = mean(weight_kg))
+df2
+
+```
+
+
+```{r}
+plt1<-ggplot(df1,aes(x=team,y=avg_height, fill=team))+
+  geom_bar(stat="identity")+
+  coord_cartesian(ylim = c(150, 200))+
+  ggtitle("Average Height of Team Players per Team per Continent")+
+  facet_grid(~team_country)+
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90, size =6))+
+  xlab("Team")+
+  ylab("Average Height in cm")
+ggplotly(plt1)
+plt2<-ggplot(df2,aes(x=team,y=avg_weight, fill=team))+
+  geom_bar(stat="identity")+
+  coord_cartesian(ylim = c(80, 110))+
+  ggtitle("Average Weight of Team Players per Team per Continent")+
+  facet_grid(~team_country)+
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90, size =6))+
+  xlab("Team")+
+  ylab("Average Height in cm")
+ggplotly(plt2)
+```
+Oceania and Europe continents have both the tallest and heaviest players out of the continent groupings, while Asia and America have the smallest for both categories.  
+
+
+### Question 2
+
+Using `polt_ly`, create side-by-side box plot that shows the distribution of age based on position.  Colorize the plot based on the continent.  Add title, x- and y-axis labels, and a key.  Include a write up afterwards of anything interesting you noticed in the data visualization.
+
+```{r}
+plot_ly(df, x=~age, y=~position, type = "box", color=~as.factor(team_country)) %>%
+  layout(boxmode = "group", yaxis = list(title=" Position"), xaxis = list("Age"), title = "Age Distribution for Position") 
+```
+Oceania tends to have the oldest players while the Americas had the youngest overall for all positions.  Oceania also had the most number of extreme values for player age.  Africa had the most evenly distributed aged players amongst positions.  
+
+
+### Question 3
+
+Consider the `height_cm` (x) and `weight_kg` (y) variables from `rugby_df`.  First, plot x and y using a scatterplot where color is based on continent.  The plot should be rendered using `plot_ly` and should show `height_cm`, `weight_kg`, `continent`, and `name` of each observation upon hover.  The x- and y-axes should be labeled and the plot should have a title.  Add the regression equation line for each of the 5 continents.
+
+Hint: To add the regression equation to your plotly plot, add a column to the data that reports the fitted estimate of `weight_kg` given the regression equation.  Then add the lines mapping x to y-hat using `add_trace()` function.
+
+Then, calculate the least squares regression equations that models the relationship between x and y based on continent (hint: there should be 5 sets of slops and y-intercepts).  The analysis should display p-values for each calculated slope in a dataframe that is clearly labeled.  After the graph and analysis, include a write-up discussing whether you believe the data can be sufficiently modeled using a linear regression equation.  You may include other analysis tools such as the coefficient of determination or the correlation coefficient.
+
+Hint: Use `lmList` from `lme4` package to find the equations simultaneously based on continent.
+
+```{r}
+mod=lm(weight_kg ~ height_cm, data=df)
+df <- df %>%
+  mutate(pred_weight = mod$fitted.values)
+summary(mod)
+
+plot_ly(data=df, x=~height_cm, y=~weight_kg, type="scatter", mode="markers", name=~team_country) %>%
+  add_lines(x=~height_cm, y=~pred_weight) %>%
+  layout(xaxis=list(title="Height in cm"), yaxis=list(title="Weight in kg"), title = "Height vs Weight")
+```
+The equation for the fitted line is weight = -87.58 + 1.02(height).  For all data, there is a p-value from the F-Test for the model of <.0001, which is a first measure of model fitness.  Since the model is useful for prediction based on this test, we can look at other model statistics such as r-squared, which is 33%.  This suggests that variation in y is not completely accounted for by the x varibale in the model (height) and it would be prudent to explore more variables or transformations.  The height variable itself has a p value of less than .0001, which indicates it is a good parameter variable in the model itself.  
+
+
+### Question 4
+
+Create a new variable in `rugby_df` called `n` that calculates the count of the number of players per debut year per continent.  Using a line plot, visualize this new varaible.  Your graph should have 5 lines, colorized by continent, formatted with x- and y-axis labels and a title.  Include a discussion on how the new variable was created and anything you observe in the visualization.
+
+```{r}
+df_date <- df %>%
+  separate(debut, sep="-", into = c("day", "month", "year"))
+df_date <- df_date %>%
+  group_by(team_country) %>%
+  count(year)
+plot_ly(data=df_date, x=~year, y=~n, type="scatter", mode="lines", color=~team_country) %>%
+  layout(title = 'The number of players per debut year per continent',
+         xaxis = list(title = 'Count'),
+         yaxis = list (title = 'Year'))
+
+```
+I used the separate function from the tidyr library to separate the debut date into three columns-- day, month, and year.  I then created a new column, called n, that held the count by year per continent.  It was apparent that most of the teams had aquired new players from the same time period: 2012-2015.  Teams had also made the least number of player aquisitions in 2004, 2011, and 2009.  
+
+### Question 5
+
+Create a final visualization of `rugby_df`.  Requirements:
+
+- Graph should include at least 3 variables, one of which is created using `dplyr`
+- Graph should either be created using `ggplot2` package and then run through `ggplotly` or should be created using `plotly` package, so that the end result is interactive.
+- Graph should be formatted with x- and y-axis labels, a title, and colorization based on one variable
+
+Following your graph, create a write-up on which variables you chose and why, and any conclusions that you have come to based on your analysis.
+
+```{r}
+df_new <- df %>%
+  na.omit()%>%
+  group_by(position) %>%
+  mutate(avg_debut_age=mean(approx_age_debuted))
+plot_new<-ggplot(df_new, aes(x=position, y=years_since_debut, fill=team_country))+
+  geom_violin()+
+  facet_wrap(~team_country)+
+  theme(axis.ticks.x=element_blank(),
+        axis.text.x=element_blank())+
+  xlab("Position")+
+  ylab("Years Since Debut")+
+  ggtitle("Years since Debut for Position")
+
+ggplotly(plot_new)
+  
+          
+```
+For my graph, I chose years since debut for position by team country.  I was interested in how long players were in different positions and if it was related to their geographic location.  Turnover rates may reflect popularity of the sport in specific regions (which may change over time).  Europe clearly had the longest time in positions as the data had the widest spread.  Asia and Africa had the most variability in years since debut for each positions.  THe lock, wing, and back row positions tended to have the longest amount of years in their positions for all continents.  

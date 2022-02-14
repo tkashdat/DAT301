@@ -1,0 +1,830 @@
+---
+title: "DAT 301 Module 3 Notes"
+author: "Samantha Tran"
+date: "12/18/2020"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+## 3.1 dplyr Part 1
+
+More on Data Manipulation; Tidyverse
+Textbook R for Data Science
+--A good poriton of this chapter of the notes are excerpts from this book
+
+data.table Github page: http://github.com/Rdatatable/data.table/wiki
+
+Prof. Derek Sonderegger's Github book: https://bookdown.org/dereksonderegger/444
+
+dplyr cheat sheet: https://rstudio.com/wp~content/uploads/2015/02/data-wrangling-cheatsheet.pdf
+
+
+##### dplyr
+The package dplyr is used for data transformation/manipulation/wrangling (data cleaning).  Six key dplyr functions that allow you to solve the vast majority of your data manipulation challenges:
+
+1. `filter()`: pick/extract rows by certain criterion **very useful**
+-- allows you to subset observations based on their values
+-- the first argument is the name of the data frame
+-- the second and subsequent arguments of `filter()` function are the expressions that filter the data frame
+
+2. `arrange()`: reorder the rows
+
+3. `select()`: pick/extract variable/columns by their names
+
+4. `mutate()`: create new variables with functions of existing variables/columns
+
+5. `summarise()`: collapse many values down to a single summary
+
+6. `group_by()`: changes the scope of each function from operating on the entire dataset to operating on it group-by-group
+
+These six functions provide the verbs for a language of data manipulation.  They make it easy to chain together multiple simple steps to achieve a complex result.
+
+General Syntax:
+- First argument is a data frame
+- The subsequent argument describes what to do with the data frame, using the variable names (without quotes)
+- The result is a new data frame
+
+
+##### filter()
+
+The following examples will use data from `nycflights13` package so first load that package in addition to `dplyr` package we will explore.
+
+```{r}
+library(dplyr)
+library(nycflights13)
+head(flights)
+```
+
+
+*Example 1*:
+Use `filter()` on rows to select all flights on September 24 in 2013
+Can use as many filter statements as you need for the dataset
+If you want to save the filtered dataframe (it does not change the original dataframe, must set to variable
+
+```{r}
+df = filter(flights, month == 9, day == 24)
+df
+```
+
+**Preferred**Using pipe operator %>% instead:
+
+Use one pipe operator per function you are applying or one pipe operator and a parentheses with the 
+list of functions you are passing
+
+Syntax:
+df %>%
+   command()
+
+```{r}
+flights %>% 
+  filter(month == 9, day == 24)
+```
+
+
+*Example 2*:
+Filter a dataframe (flights) based on either being during the month November or December.
+- Boolean operators used: & (and), | (or), ! (not)
+
+```{r}
+flights %>%
+  filter(month == 11 | month == 12)
+```
+
+- Alternative using: `varaible` %in% `vector of possible values`
+-replaces the "or" operator with a concatonated vector of the variables you want to retain
+```{r}
+flights %>%
+  filter(month %in% c(11, 12))
+```
+
+
+*Exercise*
+Filter `ToothGrowth` data to only include `OJ` supplement at the 2.0 dose level.
+
+```{r}
+ToothGrowth %>%
+  filter(supp=="OJ" & dose==2.0)
+```
+
+
+
+## 3.2: dplyr Part 2
+
+##### arrange()
+Function `arrange()` sorts data by given columns.
+This is just like sorting in Excel, when you click on the Data > Sort.  
+`arrange()` function takes a data frame and a set of column names (or more complicated expressions) to order the dataset by.  If you provide more than one column name, each additional column will be used to break ties in the values of preceding columns. Will raange by the first col, then the sec col, third col...etc
+
+
+*Example 1*:
+Arrange flights df by year first then day.  This returns all the flights of the first day of every month, in order of month
+
+```{r}
+flights %>%
+  arrange(day, month)
+```
+
+
+*Example 2*:
+To sort in descending order, wrap the var you want to sort descending order with the function `desc()`
+
+```{r}
+flights %>%
+  arrange(desc(dep_delay))
+```
+
+
+*Example 3*: 
+NA values will always be sorted to the end
+
+```{r}
+df <- tibble(x = c(5, 2, NA))
+
+df %>%
+  arrange(x)
+df %>%
+  arrange(desc(x))
+```
+
+
+### Combining multiple operations with the pipe operator `%>%`
+The pipe operator `%>%` is very useful when dealing with chain data manipulation i.e. when we apply multiple data transformations, one after the other.
+
+Code by pipe operator which simplifies the code and makes it easier to read.
+
+```{r}
+df <- tibble(x = c(5, 2, NA))
+
+df %>%
+  filter(x >= 2) %>%
+  arrange(x)
+```
+
+
+*Exercise*
+Filter the `mtcars` data to be only manual cars and then arrange in descending order based on the # of cylinders.
+
+```{r}
+head(mtcars)
+mtcars %>%
+  filter(am==0) %>%
+  arrange(desc(cyl))
+```
+
+
+##### select()
+Use `select()` function to narrow in on the variables you're interested in.  
+`select()` allows you to rapidly zoom in on a useful subset of variables (columns) using operations based on the names of the variables.
+
+Helper functions to use with `select()`:
+-- `starts_with("abc")`: matches names/col that begin with "abc"
+-- `ends_with("xyz")`: matches names/col that end with "xyz"
+-- `contains("ijk")`: matches names/col that contain "ijk"
+-- `matches("(.)\\1")`: selects variables that match a regular expression (pattern); this matches any variables that contain repeated characters
+-- `num_range("x", 1:3)`: matches x1, x2 and x3
+
+
+*Example 1*:
+Extract variables (columns) year, month and day
+
+```{r}
+flights %>%
+  select(year, month, day)
+```
+
+Use `first:last` to select all columns between and including first and last.
+
+```{r}
+flights %>%
+  select(year:day)
+```
+
+Creating a new data set with certain columns deleted using `-(first:last)`.  In this case, we delete the columns year to day and everything in between
+
+```{r}
+flights %>%
+  select(-(year:day))
+```
+
+
+*Example 2*:
+`select()` can be used to rename variables, but it's rarely useful because it drops all variables not explicitly mentioned.  Use `rename()` instead.  Will get a new dataset in return with all variables returned and the name changes reflected. New name first then old name as parameters for rename.  
+
+```{r}
+flights %>%
+  rename(tail_num = tailnum)
+```
+
+
+*Example 3*:
+Use `select()` to move certain variables to the start of the data frame.  Reference the variables you want in the front and then use `everything()` to reference the other variables at the end.
+
+```{r}
+flights %>%
+  select(time_hour, air_time, everything())
+```
+
+
+*Exercise*:
+Select the columns 1, 4, and 8:9 of `mtcars` data.  Can just use index of col.  
+
+```{r}
+mtcars %>%
+  select(1, 4, 8:9)
+```
+
+
+##### mutate()
+Add new columns that functions of existing columns.  `mutate()` always adds new columns at the end of your dataset.
+
+
+*Example 1*:
+Create a smaller data set using the `flights` dataset.
+
+```{r}
+flights_sml = flights %>%
+  select(year:day, 
+         ends_with("delay"),  ## select columns that end in delay
+         distance, 
+         air_time)
+
+head(flights_sml)
+head(flights_sml, 8) # shows first 8 rows
+```
+
+Add a variable `gain` that is the difference between `departure_delay` and `arrive_delay`.  Add a variable `speed` that is the quotient of `distance` with `air_time` times 60.
+
+```{r}
+flights_sml %>%
+  mutate(gain = dep_delay - arr_delay,
+         speed = distance / air_time * 60)
+
+flights_sml ## notice the mutations aren't saved in the original df
+```
+
+
+*Example 2*:
+You can refer to columns that you have just created in subsequent code rows e.g. create variable `gain_per_hour` by taking the quotient of `gain` with `hours`.  **Note: when you mutate, you must save into a new variable or else will not save.  Original dataset not changed!!**
+
+```{r}
+flights_sml %>%
+  mutate(gain = dep_delay - arr_delay,
+         hours = air_time / 60,
+         gain_per_hour = gain / hours)
+```
+
+
+*Exercise*:
+In the `mtcars` data, create variable `kg` that reports the weight of the car in kg rounded to 2 decimals.  Hint:  1 kilogram (kg) is equal to 2.20462262185 pounds (lbs).
+
+```{r}
+?mtcars
+mtcars %>%
+  mutate(kg = round((wt * 1000) / 2.2), 2)
+```
+
+
+
+## 3.3 dplyr Part 3
+
+
+##### summarise()
+Collapses a data frame to a single row that summarizes all the col responses specified
+
+*Example 1*:
+Summarize the data by averaging departure delay times.  Recall that `na.rm = TRUE` means remove NA values in computation.  This function needs to be added or the mean won't be able to compute due to missing NA values.
+
+```{r}
+flights %>%
+  summarise(delay = mean(dep_delay, na.rm = TRUE))
+```
+
+
+*Example 2*:
+Using `summarise()` with `group_by()` which will change the unit of analysis from complete dataset to individual groups/factors.  Then when you use dplyr verbs on grouped data frame they'll be automatically applied "by group."
+For example, if we applied exactly the same code o a data frame grouped by date we get average delay per date.
+
+```{r}
+flights %>%
+  group_by(year, month)
+
+## the group_by df contains all the data from flights but also has information on how the data is grouped 
+## and when you apply dplyr functions, they will be applied by those groups.  the result of the 
+## following `group_by` will have an averaged delay time per month in year 2013.
+
+flights %>%
+  group_by(year, month) %>%
+  summarise(delay = mean(dep_delay, na.rm = TRUE))
+```
+
+
+*Exercise*:
+Summarize the `mtcars` data by grouping by whether or not the car is manual vs automatic and then finding the average mpg and standard deviation for mpg for manual and automatic cars.  Call these variable `ampg` for average miles per gallon and `sdmpg` for standard deviation miles per gallon.
+
+```{r}
+mtcars %>%
+  group_by(am) %>%
+  summarise(ampg = mean(mpg), sdmpg = sd(mpg))
+```
+
+
+*Exercise*
+Using the `ChickWeight` data, summarize the chickens by the range in weight change between time start and time finish.  Then see if there is a difference between the average range between diets 1, 2, 3 or 4.
+
+```{r}
+head(ChickWeight)
+
+df<- ChickWeight %>%
+  group_by(Chick) %>%
+  filter(Time == min(Time) | max(Time)) %>%
+  mutate(diff = weight - lag(weight, default = weight[1]))
+
+head(df)
+  
+df %>%
+  filter(diff != 0) %>%
+  group_by(Diet) %>%
+  summarise(mean(diff))
+  
+  
+```
+
+
+
+## 3.4 Tibbles, readr, data.table
+
+
+##### Tibbles
+Tibbles are two-dimensional data, just like data frames and tables.  They were designed to make data manipulation using tidyverse packages faster than ordinary data frames and tables.  Best for datasets with large amounts of data.  
+
+Note that some older functions don't work with tibbles.  If you encounter one of these functions, use `as.data.frame()` to turn tibble back into a data frame.
+
+
+*Example 1*:
+Install `tidyverse` and load it into the environment with code `library()`.  Then, convert `iris` dataframe into tibble use `as_tibble()` function
+
+```{r}
+library(tidyverse)
+head(iris)
+as_tibble(iris)
+```
+
+
+*Example 2*:
+Create own tibble.
+
+```{r}
+tibble(
+  x=1:5,
+  y=1,
+  z=x^2 - y)
+```
+
+
+*Exercise*
+Create a tibble whose first column is numbers 1:10 and call it 'x'.  Second column is the cube of the odd numbers in column 1 and square of even numbers in column 1.  Call the second column 'y'.
+
+```{r}
+tibble(
+  x = 1:10,
+  y = ifelse(x %% 2 != 0, x^3, x^2))
+```
+
+Here we discuss how to read plain-text rectangular files into R, just the basics, but many of the principles will translate into other forms of data.
+
+- Data can be read using `readr` package which is part of `tidyverse` family.
+
+-- `read_csv()` function from `readr` package reads comma delimited files
+--- CSV files are one of the most common forms of data storage
+--- Once you understand `read_csv()` you can apply your knowledge to other functions in readr
+-- `read_csv2()` reads semicolon separated files
+-- `read_tsv()` reads tab delimited files
+-- `read_delim()` reads in files with any delimiter
+
+To read .xls and .xlsx files you can use the package `readxl` from the `tidyverse` family.
+
+Basic structure of `read_csv()`:
+File must be in same folder of R folder you working in currently, otherwise specify path
+`read_csv(file, col_names = TRUE, col_types = NULL, locale = default_locale())`
+
+
+*Example 1*:
+Read in a file using the path name.  If you use `col_names = TRUE` this will tell R that the first row (header) is composed of column names.
+
+```{r}
+library(readr)
+## read_csv(C/Users/Samantha/Desktop/RandPy/opendatasites.csv, col_names = TRUE)
+```
+
+`data.table` Package
+-- Competitor to `dplyr`
+-- http://github.com/Rdatatable/data.table/wiki
+-- data table vs. dplyr from StackOverflow
+
+
+
+## 3.5 R Markdown Part 1
+
+R Markdown allows for communication and publication of analysis.
+
+R Markdown language is a system of syntax rules by which a user, when typing text, not only controls the content of the text but also specific with additional symbols/commands the way output text should appear.
+
+-- A simple syntax (such as wrapping the text around * symbols to *italicize*) helps you improve the appearance of the text, just like an editor of a journal would mark up the text in an article should appear.
+
+-- The text in Markdown language is readable as-is without looking like it has been marked up with tags or formatting instructions.
+
+-- From the original markdown language created by John Gruber and Aaron Schwartz, various versions/implementations were created as a need for a further control of the text in various disciplines.  One of them is R Markdown, which is capable of inserting R code and its output into plain markdown.
+
+Standard template File > New File > R Markdown
+-- Document
+--- Html, pdf (need LaTeX), or Word output
+-- Presentation (slides)
+-- Shiny app
+
+##### Document
+Header includes info on title, author, date, and output of the material.
+
+##### YAML
+Serialization language.  YAML gives R Markdown some meta-data and also appears in the document.
+
+
+###### Set up code
+--Include r in curly brackets to show that we are using R language coding.  You can use Markdown with other codes such as Python and would indicate that is the code you are using here.
+
+###### "Knit"
+--This command converts various formats to other formats.  Knit will provide the output of your code.  You must save the output somewhere.
+--Shortcut: CTRL > SHIFT > K
+
+###### Styles of font **Use this for markdown files**
+-- Create hyperlinks by wrapping text in < > angled brackets
+-- Create italics by wrapping text in * * asterisks
+-- Create bold text by wrapping text in ** ** double asterisks
+-- Create bold & italic text by wrapping text in *** *** triple asterisks
+-- Font will be code font if you use back ticks ` ` around text
+Checkout RSTudio website for cheatsheet for markdown language
+
+
+
+## 3.6 R Markdown Part 2
+
+R Markdown can do powerful things!  If you don't remember how you to use certain features, you can always consult textbooks or just the internet.
+
+##### Chunk options
+
+**Check out midterm example to see many examples of using this**
+
+Put this in the `set up code`.
+
+-- `eval = FALSE`: just shows the code but does not run or show outputs
+
+-- `include = FALSE`: only runs the code but neither shows the code nor output (i.e. runs the code in the background)
+
+-- `echo = FALSE`: the code is not shown but the code is run and outputs are given
+
+-- `results = "hide"`: does not show the output but runs the code and plots/messages/the code itself are shown
+
+-- `fig.show = "hide"`: hides the plot
+
+-- `message = FALSE`: does not show message(s)
+
+-- `warning = FALSE`: does not show the warning(s)
+
+
+*Exercise*:
+Change the below set up code using the above examples.
+
+```{r}
+
+```
+
+
+You can set up default chunk options which define default features of codes that are to be executed.  For details, check out https://yihui.org/knitr/options.  Most useful options are for:
+
+-- text options: https://yihui.org/knitr/options/#text-results
+-- code evaluations: https://yihui.org/knitr/options/#code-evaluation
+-- plots/figures: https://yihui.org/knitr/options/#plots
+-- animation: https://yihui.org/knitr/options/#animation
+
+Note:  When you knit Rmd file, a new environment is created for code chunks in the Rmd file.  So you cannot directly use variables from your console (you have to name them in the Rmd code).  
+
+
+Note:  In addition, you need to be cautious about directories of files you want to use.  In order to grab variables from the `Global Environment`, you need to change working directory in Rmd file.  This is done programmatically, as a part of a code chunk in the Rmd file.
+
+
+Inline R Code:
+Use:  `` ` `` r &nbsp; < code here > `` ` ``
+
+
+*Example 1*:
+
+```{r}
+x <- c(2.2, 7, 4, -6.2)
+mean(x)
+```
+
+`` ` `` r &nbsp; < The mean of the vector `x` is `rmeanx`. > `` ` ``
+The mean of the vector `x` is `rmean(x)`.
+
+
+This makes your Rmd file report very flexible and reproducible.  If you need to update your vector `x` (for example if it is a part of a weekly report or if you made a type-o in obtaining the vector `x`) you don't need to change or update the mean of `x` manually.  It is done automatically when you knit the Rmd file after updating `x`.
+
+Some formatting (such as italiczed, bold face, unerlined etc.) can be done in Rmarkdown either by using `markdown` syntax or `LaTeX` syntax or `html` syntax.  However, keep in mind that syntaxes of all of these text scripts/software are written independently of each other and it happens not so rarely that there is a conflict of syntax.  In such situations Pandoc and Rmardown either ignore such a syntax or try (automatically) to resolve these conflicts.
+
+Note: A general rule of thumb is to use `markdown` syntax (instead of LaTeX or html) as much as possible since some LaTeX syntax will not work if you want to gneerate html and some html will not work to produce pdf files.  The simpler the elements in your document, the more likely that it can be converted to the desired different formats.  If you heavily tailor R Markdown to a specific output you are likely to lose the portability of that document.
+
+
+##### Inline text styles:
+-- `italic`: surround by asterisks or underscores.  For example: *this is italic* and _this is italic_
+
+-- `bold`: surrounded by double asterisks.  For example: **this is bold**
+
+-- `bold and italic`: surrounded by triple asterisks.  For example: ***this is both***
+
+-- underlined: no RMardown so use LaTeX \underline{this is underlined} or html <u>this is underlined<\u>
+-- `subscript`: surround title by tilde (~).  For example: X~n~, H~2~SO~4~
+
+-- superscript: surround by carets (^).  For example: R^ij^
+
+
+If you want to include certain R command as inline text so that its font is the same as in RStudio console (i.e. to look like code text) you can use a pair of backticks just like for executing R code in the text but do NOT start with "r".  For example if you type ``install.packages("dplyr")``.
+
+
+Also if there are n literal backticks use at least n+1 backticks outside.  For example produce 'install.packages("dplyr")` in the previous paragraph I typed:
+
+'' 'install.packages("dplyr")' ''
+
+in the Rmardown file.  So the backticks at the beginning and at the end were surrounded by double backticks?
+
+## 3.7 R Markdown Part 3
+
+##### New Line
+If you want to break the line and continue typing text in a new line, double Enter button to make one blank line in between two lines of text.
+In LaTeX you could use "\newline" at the end of the first line.
+
+##### New Page
+To break a page and move to a new page, use the latex command "\newpage" at the place in the file where you want to enforce the new blank page.
+
+##### Hyperlinks
+Use syntax: [text](link).
+
+For example: [Rstudio webpage](https://www.rstudio.com) in the R Markdown file.  The color is by default black.
+
+If you want the text to be the same as linke, type <link>.  For example: <https://www.rstudio.com>.
+
+##### Inserting Images
+Use markdown command: ![caption](path to your image)
+
+Or:
+Use R code chunk with `knitr::include_graphics()`
+Use LaTeX command
+
+##### Footnotes
+Footnote are made using ^[footnoted text] right after the text which you want to be marked with the footnote.
+
+##### Commenting
+RMarkdown uses html convention for commenting text.  Whichever comment you want to make (for yourself or other programmer) you should wrap it between <!-- and -->.  These comments will be visible in the code but not the knitted output.
+
+##### Tables
+There are three basic ways to create a table, using:
+-- `kable()` function from knitr package
+-- `xtable` package
+-- `stargazer` package (for summary statistics tables)
+
+
+*Example*:
+Data frame from cars vs. knitr vs. xtable vs. stargazer
+
+Create a `kable` from `knitr` of a subset of `mtcars` data frame and name the table "A subset of Mtcars."
+
+```{r}
+library(knitr)
+mtcars[1:6, 1:7]
+knitr::kable(mtcars[1:6, 1:7], caption='A subset of mtcars')
+```
+
+Create a table using `xtable` of the same data.
+
+```{r}
+library(xtable)
+options(xtable.comment = FALSE) ## suppress printing before the appearance of table
+print(xtable(mtcars[1:6, 1:7],
+             captions="Table using xtable package"),
+      align='center', type='latex')
+```
+
+Create a table of the same data using `stargazer` package.
+
+```{r}
+library(stargazer)
+stargazer::stargazer(data = mtcars[1:6, 1:7], header = FALSE, type = 'latex', title = 'Table created by stargazer')
+```
+
+
+*Exercise*:
+Summarise `PlantGrowth` data by finding the average per treatment group.  Then, create a `kable` of the data.
+
+```{r}
+
+```
+
+
+##### Greek letters
+$\alpha, \beta, \epsilon, \varepsilon, \phi, \varphi, \chi^2_d$
+
+# remember ^ means superscript and _ means underscript
+
+## 3.8 Regression Part 1
+
+##### Regression; Ioslides; Plotly
+
+
+*Example*:
+The `trees` dataset is about 31 cherry trees.
+
+Suppose we want to estimate the volume of the cherry tree based on its girth since it's easier to measure the girth of a tree than its volume.
+  Girth means diameter in this set.
+In this case, since we will use `Girth` to predict `Volume`:
+`explanatory variable(x)`: Girth
+`response variable(y)`: Volume
+
+Note:  This does not say that certain girths cause volumes.  We only want to say or guess something about volume based on our knowledge about girth.  Both variables may be actually in a causational relationship with a 3rd variable(s) that are not in the study.
+
+
+```{r}
+data(trees)
+head(trees)
+girth <- trees$Girth
+volume <- trees$Volume
+plot(girth, volume,
+     type="p",
+     main="Tree Volume vs. Girth",
+     xlab="Tree Girth",
+     ylab="Tree Volume",
+     col="green",
+     pch=20)
+```
+
+
+##### Regression Analysis
+
+Most regression analyses will start with a plot of x against y to determine if there is a linear relationship between the explanatory and response variables.  In general, the relationships may trend towards some sort of pattern but they will not usually be absolute.  This just means there is some deterministic process that can be modeled plus some random factor.
+
+There are two types of linear trends:
+-- Positive correlation: we see an increasing trend larger values of x tend to correspond to larger values of y
+-- Negative correlation: we see an increasing trend larger values of x tend to correspond to smaller values of y
+
+
+###### Simple linear model with 1 predictor variable
+
+Model: Volume = beta0 + beta1*Girth + error
+-- beta0 is the population y intercept
+-- beta1 is the slope, values calculated using the population data
+-- error ~ N(0, sigma^2) epsilon, assume it is normally distributed with mean of 0 and sd us sigma squared
+
+Fitted Equation: Volume = b0 + b1*Girth (SAMPLE DATA)
+-- y-intercept (b0) and slope (b1) are calculated using sample data and used to estimate the population y-intercept (beta0) and slope (beta1)
+
+Note: These values are based on the sample data, so with new samples your estimates will change.
+
+Also note: We can have more complicated equations using polynomials (i.e. cubic models).
+
+
+###### What is your estimate of b0 and  b1?
+Code Syntax: lm stands oe linear model
+lm(y ~ x, data =)
+-- lm is for linear model
+-- y is the response variable from the data
+-- x is the explanatory variable from the data
+-- specify data if it is ambiguous/not specified by vactors
+
+The regression equation will provide us a way to calculated predicted volumes for values of girth.  Gets beta values through least squares to find best fit of line to data.
+
+The estimated values for y will be our best guess for inputted values of x, i.e., the fitted line is mapping the expected values of y for given values of x.  Expected value of error is zero, so that is dropped.
+
+Ex: E[yhat] = E[beta0 + beta1x + epsilon] = E[beta0] + E[beta1x] + E[epsilon] = beta0 + beta1x
+
+The x variable is not a random variable but a constant since we are assuming we know what x is and are estimating what y is using that x value.
+
+
+##### How to add the least squares regression line to the plot?
+Use the code `abline()`.
+
+AN extrapolated value is one that is estimated from x values outside the range of the data given for the linear model.  FOr example, typically the intercept is an extrapolated value and has no real meaning.
+
+p values for explanatory variables should be significant.  R tells you at which level it is significant.
+
+rsquared values: measures goodness of fit of model.  measured in percent.  THe amount of variation inthe model that y can be explained by x, as opposed to chance,  closer to 1, the better. adjusted r squares takes weights of variables into consideration.  but these terms are generally very close
+
+
+F test, tests the equation itself.
+
+*Example*:
+Plot girth vs. volume from the tree data.  Find the least squares regression equation and name is `fit`.  View the components of `fit`.  Then add the least squares line using `abline()`.
+
+```{r}
+plot(girth, volume,
+     type="p",
+     main="Tree Volume vs. Girth",
+     xlab="Tree Girth",
+     ylab="Tree Volume",
+     col="green",
+     pch=20)
+fit <- lm(volume~girth)
+summary(fit)
+abline(fit)
+```
+
+
+
+## 3.9 Regression Part 2
+
+
+*Example*:
+Can we predict the price we can sell a diamond given the number of carats?
+
+Model: Price = beta0 + B1*Carat + epsilon; epsilon ~ N(0, sigma^2)
+Fitted Equation: Price = b0 + b1*Carat
+
+Start with the scatterplot to see if there is evidence of a linear relationship between carat (x) and y (price).  Then find the fitted model between carat and price using `lm()` and name this equation `fit`.  Finally, add the `abline()` to the plot.
+
+```{r}
+library(UsingR)
+data(diamond)
+head(diamond)
+plot(diamond$carat, diamond$price,
+     type="p",
+     main="Dataset diamond from UsingR",
+     xlab="Diamond Carat",
+     ylab="Diamond Price",
+     col="purple",
+     pch=20)
+fit <- lm(price~carat, data=diamond)
+fit
+str(fit) ## list that consists of info regarding regression model
+fit$residuals # reference the fitted equation and the information from it
+abline(fit)
+```
+
+
+##### Other notes on outputs for summary of fit:
+-- Estimated values are our b0 and b1 values
+-- R^2 gives us the % of variability in y explained by x.  Higher percents (closer to 100%) are preferred
+-- Small p-values shows us that the fit is good and that the variable is important component of the linear regression model
+
+Use the `summary()` function to check the fitted equation.
+
+
+*Example*:
+Identify the p-values for the y-intercept and slope and see if they are significant at the 5% level.  Identify and interpret R^2.
+
+```{r}
+summary(fit)
+```
+
+
+##### Criterion based on which we fit the linear equation to the data:
+-- Most of the points should be close as possible to the line
+-- How close the data are should be measured vertically since we are measuring estimated y values.  This vertical distance is called the "error."
+
+##### Objective criterion for least squares regression equation
+We want to minimize the sum of the squared errors; i.e. the square vertical distance between the sample data point and the regression line at point xi
+
+*Why are the errors squared?*
+-- We square because if we summed the positives and negatives would cancel out.
+-- Squaring will also give more penalties to the data values that have very far vertical distances.***
+-- When we use sum of squared errors we get a strictly convex function.  Theoretically, such a function will always have a unique minimum.  This is attractive for using sum of squared errors instead of absolute value of errors.
+-- There is also some sort of orthogonality.  If we consider the errors as a vector (matrix n rows 1 column) we are minimizing the length of the error vector.  --based on linear algebra (multivariate analysis)
+
+##### Decomposition of regression equation
+SST = SSM + SSE
+  SST: decomposition of variability of ALL y data, total sum of squares 
+  SSM: sum of square of model; decomposition into part of variability due to x variable(s), captured by model (maximize this)
+  SSE: sum of square of errors; decomposition into part of variability due to randomness of noise, not captured by model (minimize this)
+
+Computationally:
+  sum(yi - ybar)^2 = sum(yhat - ybar)^2 + sum(yi - yhat)^2
+
+
+*Exercise*:
+Plot wt (x) vs. mpg (y) from the `mtcars` data.  If there is evidence of a linear relationship between wt and mpg, find fitted equation.  Determine if the p-values are significant at the 5% level and determine the goodness of fit of the fitted equation.  Then, add the equation to the plot.  Remember, we can only predict within the domain of the x values for the model 
+
+Can adjust for different data transformations directly in model code, for example here we are applying sqrt would do this if we saw in a curve in the data for example)
+```{r}
+wt <- mtcars$wt
+mpg <- mtcars$mpg
+plot(x = sqrt(wt), y = mpg, main = "Weight v MPG", pch = 20, col = "purple")
+fit <- lm(mpg~sqrt(wt), data = mtcars)
+summary(fit)
+abline(fit)
+```
+
+
+```{r}
+wt <- mtcars$wt
+mpg <- mtcars$mpg
+plot(x = wt, y = mpg, main = "Weight v MPG", pch = 20, col = "purple")
+fit <- lm(mpg~wt, data = mtcars)
+summary(fit)
+abline(fit)
+```

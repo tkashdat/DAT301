@@ -1,0 +1,165 @@
+---
+title: "DAT301 Midterm"
+author: "Tiffany Kashima"
+date: "10/18/2021"
+output:
+  ioslides_presentation: default
+  beamer_presentation: default
+---
+<style type="text/css">
+
+body{ /* Normal  */
+   font-size: 16px;
+}
+pre.lang-r{ /* Code block */
+  font-size: 10px;
+}
+pre {
+  font-size: 42px
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(plotly)
+library(ggplot2)
+library(tidyr)
+library(RColorBrewer)
+```
+
+
+## New York Public Library
+
+<div style="color: CornflowerBlue;">
+New York Public Library Background
+</div>
+The New York Public Library system in New York City, NY has 92 locations in three boroughs and one central unit.  It was founded in 1895 and is not only one of the oldest library systems in the United States, but also the largest.  It serves over 16 million people a year, offering major research centers, digital and print resources, historical archives and exhibits, English literacy classes, job search resources, and public internet access.  Additionally, it hosts a variety of adult, young adult, and juvenile programs.
+</br>
+
+## New York Public Library Dataset
+
+- The New York Library Dataset gives information on attendance, programs offered, and locations.  
+- Does attendance in young adult programming increase with the number of programs offered?
+- Are the number of young adult books in circulation also an explanatory variable for attendance?
+- Using a linear regression, can we robustly model attendance based on number of programs per borough served?  
+
+
+## Data Cleaning
+
+Data Source: https://data.cityofnewyork.us/Recreation/New-York-Public-Library-NYPL-Branch-Services-from-/ne9z-skhf
+</br></br>
+Created a variable for ratio of attendance to number of programs for young adult.
+Removed rows with NA values, blank strings, and "subtotal".  Only included variables of interest (Young Adult Attendance, Young Adult Programming, Outreach Programs) for each major borough plus central areas.
+```{r dataload, include=FALSE, warning=FALSE, message=FALSE}
+nypl <- read.csv(file = 'New_York_Public_Library__NYPL__Branch_Services_from_7-2010_to_6-2011.csv')
+```
+
+```{r data description, echo= TRUE, error=FALSE, tidy= TRUE}
+df <- nypl %>%
+  drop_na() %>%
+  filter(Boro.Central.Library != "Other" & Boro.Central.Library != "System") %>%
+  filter(Network != "Special Units" & Network != "Special Unit" & Network != "") %>%
+  filter(Branch != "Subtotal:" & Branch != "CENTRAL LIBRARY TOTAL:") %>%
+  filter(YOUNG.ADULT.Program != 0) %>%
+  select(Boro.Central.Library, YOUNG.ADULT.Attendance, YOUNG.ADULT.Program, CIRCULATION.Young.Adult)
+```
+
+
+## Scatterplot
+
+It appears there is a linear relationship between the number of programs offered (x) and attendance (y).
+```{r Data Realtionship Plots, tidy = TRUE, include = TRUE, echo = FALSE, warning=FALSE, fig.width = 6, fig.height = 4}
+fig <- plot_ly(df, x = ~YOUNG.ADULT.Program, y= ~YOUNG.ADULT.Attendance, 
+               text = ~Boro.Central.Library,
+               type = 'scatter',
+               mode = 'markers',
+               color = ~Boro.Central.Library,
+               colors = "Dark2",
+               marker = list(symbol = 'circle', 
+                             sizemode = 'diameter'))
+fig <- fig %>% 
+  layout(title = "Attendance in Youth Programming by Number of Programs per Borough",
+        xaxis = list(title = "Number of Young Adult Programs",
+                     gridcolor = 'rgb(255,255,255)',
+                     ticklen = 5,
+                     gridwidth = 2),
+        yaxis = list(title = "Number of Attendees",
+                     gridcolor = 'rgb(255,255,255)',
+                     ticklen = 5,
+                     gridwidth = 2),
+        paper_bgcolor = 'rgb(243, 243, 243)',
+        plot_bgcolor = 'rgb(243, 243, 243)')
+fig
+```
+
+
+## Histogram
+
+Histogram of the x variable, Number of Programs by Borough.  The histogram is skewed to the right, with greatest number of programs per branch netween 15-20 for young adults.  
+
+```{r Data Histogram for Programs, tidy = TRUE, include = TRUE, echo = FALSE, warning=FALSE, fig.width = 6, fig.height = 4}
+hst <- ggplot(df, aes(x=YOUNG.ADULT.Program, fill=Boro.Central.Library)) +
+  geom_histogram(binwidth = 30, color = "black") +
+  scale_fill_manual(values = c('dodgerblue', 'darkmagenta','darkorange1','deeppink1')) +
+  labs(title = "Histogram for Number of Programs", 
+       x = "Number of Programs",
+       y = "Count",
+       fill = "Borough")
+hst
+```
+
+
+## 3D Scatterplot
+
+What happens when we add the variable representing the number of young adult books in circulation for each branch?
+
+```{r Data Realtionship with circulation, tidy = TRUE, include = TRUE, echo = FALSE, warning=FALSE, fig.width = 6, fig.height = 4}
+fig2 <- plot_ly(df, x = ~YOUNG.ADULT.Program, y= ~YOUNG.ADULT.Attendance, 
+                z= ~CIRCULATION.Young.Adult, color = ~Boro.Central.Library, 
+                colors = "Dark2",
+                marker = (list(symbol = 'circle', size = 5)),
+                text = ~paste("Programs:", YOUNG.ADULT.Program, "Attendance:", YOUNG.ADULT.Attendance, "Circulation:", CIRCULATION.Young.Adult))
+fig2 <- fig2 %>% add_markers()
+fig2 <- fig2 %>% layout(title = 'Programs vs Attendance vs Books',
+                        scene= list(xaxis = list(title='Programs',
+                                                  gridcolor = 'rgb(255, 255, 255)'),
+                                     yaxis = list(title='Attendance',
+                                                  gridcolor = 'rgb(255, 255, 255)'),
+                                     zaxis = list(title='Books in Circulation',
+                                                  gridcolor = 'rgb(255, 255, 255)')),
+                        paper_bgcolor = 'rgb(243, 243, 243)',
+                        plot_bgcolor = 'rgb(243, 243, 243)')
+fig2
+
+```
+
+## Linear Regression
+<font size = 3>
+Fitting a least squares regression line using a linear model of degree 1, appears to fit the data well.  The goodness of fit for the model is 76%, which is indicates that most of the variation in y is attributed to x.  Further, the P-value from the F-test for the model is less than .001.  The model appears to be a useful predictor of attendance based on the number of programs offered.
+</font>
+```{r Linear Regression Model, tidy = TRUE, include = TRUE, echo = FALSE, warning=FALSE, message=FALSE, fig.width = 7, fig.height = 4}
+plt <- function (fit) {
+  ggplot(fit$model, aes_string(x = names(fit$model)[1], y = names(fit$model)[2])) + 
+    geom_point(aes(color=df$Boro.Central.Library, shape=df$Boro.Central.Library, colors="Dark2")) +
+    stat_smooth(method = "lm") +
+    labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                       "Intercept =",signif(fit$coef[[1]],5 ),
+                       " Slope =",signif(fit$coef[[2]], 5),
+                       " P =",signif(summary(fit)$coef[2,4], 5)),
+         x = "Programs",
+         y = "Attendance")+
+    theme(legend.title=element_blank())
+}
+
+fit1 <- lm(YOUNG.ADULT.Program ~ YOUNG.ADULT.Attendance, data = df)
+plt3 <- plt(fit1)
+ggplotly(plt3)
+```
+
+## Conlcusion
+<font size=3>
+While it may seem like common sense that the more programs offered, there would be a positive relationship with attendance, this is not always the case.  Especially in socioeconomic diverse areas, access to transportation, literacy levels, mean/median income levels, and access to other resources may severely restrict the ability to attend public library programming, regardless of the number offered.  Based on the linear regression slide, it does appear that the number of programs have greater strength in their linear relationship to attendance under 150.  Beyond that, the spread of the data points is quite large.  Thus, there does seems to be a further ceiling to our domain for the predictive model.  
+</br>
+Increasing programs for the New York city area does appear to be a starting point for increasing attendance.  However, it would be appropriate to look at further explanatory variables, such as branch number per age density in different neighborhoods and at the demographics of participating patrons versus non-participating patrons for the same branch. 
+</font>

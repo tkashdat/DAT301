@@ -1,0 +1,364 @@
+---
+title: "Plotly"
+output: pdf_document
+---
+
+The following examples are adapted from:  https://plotly.com/r/
+
+```{r}
+library(plotly)
+library(dplyr)
+```
+
+
+## 2d scatterplot
+
+##### change size attributes of 2d scatterplot using `add_markers()` specs
+
+- `color`: use to specify the factor to base color off of
+
+- `colors`: use to specify the color(s) to use.  If using vector, string the colors together with `c()`
+
+Note: Once you have reference the dataset in data = , then you can just assign dependent and independent variables directly with a ~
+Plot is interactive
+
+```{r}
+a <- plot_ly(data = iris, x = ~Sepal.Length, y = ~Petal.Length)
+a <- a %>% add_markers(color = ~Species, colors = "Set1", size = 10)
+a <- a %>% layout(xaxis = list(title = "Sepal Length"), yaxis = list(title = "Petal Length"))
+a
+```
+
+##### can specify unique color scales
+
+- The `colors` argument also accepts a character vector of any valid R color code(s).
+
+- To ensure a particular data value gets mapped to particular color, provide a character vector of color codes, and match the names attribute accordingly using `setNames` function.
+
+```{r}
+pal <- c("red", "blue", "green")
+pal <- setNames(pal, c("virginica", "setosa", "versicolor"))
+
+b <- plot_ly(data = iris, x = ~Sepal.Length, y = ~Petal.Length)
+b <- b %>% add_markers(color = ~Species, colors = pal, size = 10)
+b <- b %>% layout(xaxis = list(title = "Sepal Length"), yaxis = list(title = "Petal Length"))
+b
+```
+
+##### mapping data to symbols
+
+can further visualize factors as subfactors (a serosa iris located in a specific geographtic area)
+use add_markets to change symbols based on a specific attribute
+
+```{r}
+c <- plot_ly(data = iris, x = ~Sepal.Length, y = ~Petal.Length)
+c <- c %>% add_markers(symbol = ~Species, symbols = c('circle', 'x', 'o'), color = I('black'), size = 10)
+c <- c %>% layout(xaxis = list(title = "Sepal Length"), yaxis = list(title = "Petal Length"))
+c
+```
+
+##### adding color and size mapping
+
+- Can specify the size of the dot based on a factor inside `add_marker()` option
+- colro based on cut, size based on carat size in this example for points on graph
+
+```{r}
+set.seed(1234)
+df <- diamonds[sample(nrow(diamonds), 1000), ] ## randomly sample 1000 diamond obserations
+
+d <- plot_ly(data = df, x = ~carat, y = ~price)
+d <- d %>% add_markers(color = ~carat, size = ~carat)
+d <- d %>% layout(xaxis = list(title = "Carat"), yaxis = list(title = "Price (US $)"))
+d
+```
+
+##### change data labels on hover
+
+- Specify with `text` input inside `add_marker()`
+<br> is break (to next line)
+
+```{r}
+df <- diamonds[sample(nrow(diamonds), 1000), ] ## randomly sample 1000 diamond obserations
+
+e <- plot_ly(data = df, x = ~carat, y = ~price)
+e <- e %>% add_markers(color = ~carat, size = ~carat, text = ~paste("Price: ", price, '$<br>Cut:', cut))
+e <- e %>% layout(xaxis = list(title = "Carat"), yaxis = list(title = "Price (US $)"))
+e
+```
+
+
+##### Exercise:
+
+Using `starwars` dataset in `dplyr`, plot the characters' height (x-axis) vs their mass (y-axis) as a 2d scatterplot.  Stylize the markers so that the name of the characters appears upon hover and that the color of the marker reflects their gender.
+
+```{r}
+starwars
+d <- plot_ly(data = starwars, x = ~height, y = ~mass)
+d <- d %>% add_markers(color = ~height, size = ~mass)
+d <- d %>% layout(xaxis = list(title = "height"), yaxis = list(title = "mass"),
+                  text = ~paste("Name: ", name))
+d
+```
+
+
+## 3d scatterplot
+
+- `scene` changes the orientation of the axis to flesh with the axis itself
+
+- Change size attribute using `size` in `add_markers()` input
+
+- Can map color to a factor using `color=` and then specify the colors to use for each factor using `colors=` in `add_markers()` input
+- Can also use on one of the libraries with color gradients
+
+```{r}
+f <- plot_ly(data = mtcars, x = ~qsec, y = ~mpg, z = ~wt)
+f <- f %>% add_markers(color = as.factor(mtcars$am), colors = c(I("red"), I("blue")), alpha = 0.5, size = 30)
+f <- f %>% layout(scene = list(xaxis = list(title = '1/4 Mile Time'),
+                     yaxis = list(title = 'Miles/(US) Gallon'),
+                     zaxis = list(title = 'Weight (1000 lbs)')))
+f
+```
+
+##### `colorscale` can be used for continuous factor inputs
+
+- Can specify marker in original `plot_ly` line of code (which seems to work better for continuous colors) and then `add_markers()` in second line of code
+
+```{r}
+g <- plot_ly(mtcars, x = ~wt, y = ~hp, z = ~qsec, 
+             marker = list(color = ~mpg, colorscale = c('#FFE1A1', '#683531'), showscale = TRUE)) # showscale for key, using two colors will create a gradient between those two colors
+g <- g %>% add_markers(text = ~paste("HP:", hp)) # add HP data to hover marker
+g <- g %>% layout(scene = list(xaxis = list(title = 'Weight'),
+                                   yaxis = list(title = 'Gross horsepower'),
+                                   zaxis = list(title = '1/4 mile time')))
+g
+```
+
+
+##### Exercise:
+
+Create a 3d plot where y is Life Expectancy (`lifeExp`), x is GDP (`gdpPercap`), and z is population (`pop`).  Make the size of the markers equal to the `size` variable (which is population) and colorize the marker based on the continent (`continent`).
+
+Can specify a size for the markers with sizes = , sizemode = 
+Specify colors outside of plotly call
+layout for plot: can specify ranges for each axis, grid color, tick length, grad width, etc
+
+
+```{r}
+library(plotly)
+
+data <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/gapminderDataFiveYear.csv")
+
+data_2007 <- data[which(data$year == 2007),]
+data_2007 <- data_2007[order(data_2007$continent, data_2007$country),]
+data_2007$size <- data_2007$pop
+colors <- c('#4AC6B7', '#1972A4', '#965F8A', '#FF7070', '#C61951')
+
+fig <- plot_ly(data_2007, x = ~gdpPercap, y = ~lifeExp, z = ~pop, color = ~continent, size = ~size, colors = colors,
+             marker = list(symbol = 'circle', sizemode = 'diameter'), sizes = c(5, 150),
+             text = ~paste('Country:', country, '<br>Life Expectancy:', lifeExp, '<br>GDP:', gdpPercap,
+                           '<br>Pop.:', pop))
+fig <- fig %>% layout(title = 'Life Expectancy v. Per Capita GDP, 2007',
+         scene = list(xaxis = list(title = 'GDP per capita (2000 dollars)',
+                      gridcolor = 'rgb(255, 255, 255)',
+                      range = c(2.003297660701705, 5.191505530708712),
+                      type = 'log',
+                      zerolinewidth = 1,
+                      ticklen = 5,
+                      gridwidth = 2),
+               yaxis = list(title = 'Life Expectancy (years)',
+                      gridcolor = 'rgb(255, 255, 255)',
+                      range = c(36.12621671352166, 91.72921793264332),
+                      zerolinewidth = 1,
+                      ticklen = 5,
+                      gridwith = 2),
+               zaxis = list(title = 'Population',
+                            gridcolor = 'rgb(255, 255, 255)',
+                            type = 'log',
+                            zerolinewidth = 1,
+                            ticklen = 5,
+                            gridwith = 2)),
+         paper_bgcolor = 'rgb(243, 243, 243)',
+         plot_bgcolor = 'rgb(243, 243, 243)')
+
+fig
+```
+
+
+## Bar chart
+
+##### Basic
+
+- specify `type = "bar`
+
+```{r}
+df = ChickWeight %>% 
+  group_by(Time) %>% #AVERAGE CHANGE in weight over time
+  summarize(xbar = mean(weight))
+
+h <- plot_ly(data = df, x = ~Time, y = ~xbar, name = "Average Change in Weight", type = "bar")
+h
+```
+
+##### Side by side bar chart
+
+Side by side bar charts must be graphed from one dataframe
+
+```{r}
+df1 = ChickWeight %>% 
+  group_by(Diet, Time) %>%
+  filter(Diet == 1) %>%
+  summarize(xbar1 = mean(weight))
+df2 = ChickWeight %>% 
+  group_by(Diet, Time) %>%
+  filter(Diet == 2) %>%
+  summarize(xbar2 = mean(weight))
+
+dfc = data.frame(df1, xbar2 = df2$xbar2) # combine two dataframes in to one for side by side graph
+
+i <- plot_ly(data = dfc, x = ~Time, y = ~xbar1, type = 'bar', name = 'Diet 1') # for y, only need to specfiy one of the responses here
+i <- i %>% add_trace(y = ~xbar2, name = 'Diet 2') #now plot second bar
+i <- i %>% layout(yaxis = list(title = 'Weight Change (gm)'), barmode = 'group')
+i
+```
+
+##### Stacked bar chart
+
+```{r}
+j <- plot_ly(data = dfc, x = ~Time, y = ~xbar1, type = 'bar', name = 'Diet 1')
+j <- j %>% add_trace(y = ~xbar2, name = 'Diet 2')
+j <- j %>% layout(yaxis = list(title = 'Weight Change (gm)'), barmode = 'stack') #same thing as above, just change barmode
+j
+```
+
+##### Change color & hover using single bar chart
+
+- Specify color of bar and outline & sizes using `marker = list(color = , line = )` in `plot_ly` line
+
+- Add text to hover using `text` input
+
+- Add title and axis labels using `layout()` function.  x- and y-axis will be specified using `= list(title = ))`
+
+```{r}
+k <- plot_ly(data = df, x = ~Time, y = ~xbar, text = df$Time, name = "Average Change in Weight", type = "bar",
+             marker = list(color = "rgb(158,202,225)", line = list(color = 'rgb(8,48,107)', width = 1.5)))
+k <- k %>% layout(title = "Average Change in Chick Weight", 
+                  xaxis = list(title = "# days since birth"), yaxis = list(title = "Weight (gm)"))
+k
+```
+
+##### Add direct labels using double bar chart
+
+- Add text on bars using `text =` command in line of code with the bar and then specify `textposition = 'auto'` or whichever position you want
+
+- Can change label angle rotation using `tickangle`
+
+```{r}
+l <- plot_ly(data = dfc, x = ~Time, y = ~xbar1, 
+             type = 'bar', name = 'Diet 1', text = ~xbar1, textposition = 'auto', color = I("black"))
+l <- l %>% add_trace(y = ~xbar2, name = 'Diet 2', text = ~xbar2, textposition = 'auto', color = I("purple"))
+l <- l %>% layout(xaxis = list(title = "Time Since Birth (days)", tickangle = -45), #tickangle changes angle of anis tick labels, negative so it rotates counterclockwise
+                  yaxis = list(title = 'Weight Change (gm)'), barmode = 'bar')
+l
+```
+
+
+##### Exercise:
+Create a styled bar chart depicting the US export of plastics to China and the Rest of the World ("roW").
+
+```{r}
+x <- c(1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012)
+roW <- c(219, 146, 112, 127, 124, 180, 236, 207, 236, 263, 350, 430, 474, 526, 488, 537, 500, 439)
+China <- c(16, 13, 10, 11, 28, 37, 43, 55, 56, 88, 105, 156, 270, 299, 340, 403, 549, 499)
+data <- data.frame(x, roW, China)
+plt3 <- plot_ly(data = data, x = ~x, y = ~China, type = 'bar', name = 'China', color = I("Blue")) # for y, only need to specfiy one of the responses here
+plt3 <- plt3 %>% add_trace(y = ~roW, name = 'DRest of World', color = I("Green")) #now plot second bar
+plt3 <- plt3 %>% layout(yaxis = list(title = 'Exports'), xaxis = list(title = "Year"), barmode = 'group')
+plt3
+```
+
+
+## Pie Charts
+
+##### Basic
+
+- `type = 'pie'`
+
+- `values` should be some relative frequency (percent of whole) or count
+
+```{r}
+set.seed(1234)
+
+dfsw <- starwars %>%
+  filter(is.null(homeworld) == FALSE, homeworld != "null") %>% # checks to see if that varible is NULL, set false to make sure only not null values are included in graph
+  group_by(homeworld) %>%
+  summarise(n = n()) # summarise using counts
+
+m <- plot_ly(dfsw, labels = ~homeworld, values = ~n, type = 'pie', 
+               textposition = 'inside', textinfo = 'label+percent', #where you can specify the type of data displayed 
+               hoverinfo = 'text', text = ~paste(homeworld, n)) # homeworld count
+m <- m %>% layout(title = 'Star Wars Character Homeworlds',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE), #showgrid to remove gridlines, zeroline to show axes
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+m
+```
+
+##### Subplots
+
+- Specify the `grid` in the `layout()` specification
+
+```{r}
+dfswf <- starwars %>%
+  filter(homeworld != "null", is.na(homeworld) == FALSE, gender == "feminine") %>% # filter by gender
+  group_by(homeworld) %>% #group by homework
+  summarise(n = n()) # counts for each group (homeworld)
+
+dfswm <- starwars %>%
+  filter(homeworld != "null", is.na(homeworld) == FALSE, gender == "masculine") %>%
+  group_by(homeworld) %>%
+  summarise(n = n())
+
+n <- plot_ly()
+n <- n %>% add_pie(data = dfswf, labels = ~homeworld, values = ~n, # add 1 pie graph based on females
+                       name = "Femme", domain = list(row = 1, column = 0)) # domain is location based on column and row
+n <- n %>% add_pie(data = dfswm, labels = ~homeworld, values = ~n, # add 1 pute graph side by side based on males
+                       name = "Masc", domain = list(row = 1, column = 1))
+n <- n %>% layout(title = "Femme vs Masc Chars: Uniquess of Homeworld in Star Wars Universe",
+                      showlegend = FALSE,
+                      grid = list(rows=1, columns=2), #creates a grid of plots
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+n
+```
+
+
+##### Exercise:
+
+Using `mtcars` dataset, show 2 pie charts; one for v shaped (0 = V-shaped) and the other for straight (1 = straight) engines.  The pie charts should show the relative frequency of `cyl` variable.
+
+```{r}
+mtcars
+mtcarsV <- mtcars %>%
+  filter(vs == 0) %>% 
+  group_by(cyl) %>%
+  summarise(n = n()) # n() counts the number of rows for group (cyl)
+mtcarsV
+
+mtcarsS <- mtcars %>%
+  filter(vs == 1) %>%
+  group_by(cyl) %>%
+  summarise(n = n())
+mtcarsS
+
+m <- plot_ly()
+m <- m %>% add_pie(data = mtcarsV, labels = ~cyl, values = ~n, #make sure you reference the correct data set
+                       name = "V Engine", domain = list(row = 1, column = 0)) 
+m <- m %>% add_pie(data = mtcarsS, labels = ~cyl, values = ~n, 
+                       name = "Straight Engine", domain = list(row = 1, column = 1))
+m <- m %>% layout(title = "V engine vs Straight engine, based on cylinders",
+                      showlegend = FALSE,
+                      grid = list(rows=1, columns=2), #creates a grid of plots
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+m
+
+```

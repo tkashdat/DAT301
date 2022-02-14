@@ -1,0 +1,662 @@
+---
+title: "DAT 301 Module 1 Notes"
+---
+
+## 1.1	Getting Started with R and RStudio
+
+*To create a new R Markdown file*:
+
+`File -> New File -> R Markdown`
+
+Note:  In order to create a PDF, you’ll need to have LaTeX installed.  If you don’t have LaTeX installed, use MS Word as your output.
+
+
+In your R Markdown file there are 4 panes:
+
+• Editor (Top Left)
+Where you edit the script. This is where you should write most all of your R code. You should write your code, then execute it from this pane. Because nobody writes code correctly the first time, you’ll inevitably make some change, and then execute the code again. This will be repeated until the code finally does what you want.
+
+• Console (Bottom Left)
+You can execute code directly in this pane, but the code you write won’t be saved. I recommend only writing stuff here if you don’t want to keep it. I only type commands in the console when using R as a calculator and I don’t want to refer to the result ever again.
+
+• Environment (Top Right)
+This displays the current objects that are available to you. I typically keep the data.frame I’m working with opened here so that I can see the column names.
+
+• Miscellaneous (Bottom Right)
+This pane gives access to the help files, the files in your current working directory, and your plots (if you have it set up to show here.)
+
+
+*There are two types of regions*:
+
+• Commentary
+These are the areas with a white background. You can write nearly anything here and in your final document it will be copied over. I typically use these spaces to write commentary and interpretation of my data analysis project.
+
+• Code chunk
+These are the grey areas. This is where your R code will go. When knitting the document, each code chunk will be run sequentially and the code in each chunk must run.  These are separated by three backticks and {R}.  To insert a new code chunk, a user can type it in directly, use the green Insert button, or the keyboard shortcut.
+
+
+*To execute an R Markdown code*:
+•	Press the green arrow at the top of the code chunk to run the entire chunk.
+•	The run button has several options has several options.
+•	There are keyboard shortcuts, on the Mac it is Cmd-Return.
+
+
+*Commenting in R*:
+Allow programmers to clarify what certain parts of the code do without interfering with the programming code itself.
+
+To type comments, start with # key.  Anything after # will be ignored by R.
+
+R will shade these in green.
+
+*Notes*:
+•	It takes some experience to get a good feeling about when to comment and opw much.  The general idea is the more comments the better.
+•	Writing comments should be like talking to yourself in the future, explaining a particular code snippet so that you don’t forget what each component does in the code itself.
+
+
+*To produce output*:
+You’ll “knit” the document which causes all of the R code to be run in a new R session, and then weave together the output into your document. This can be done using the knit button at the top of the Editor Window.
+
+
+## 1.2	Basic Functions
+
+*Assigning variables*
+May use `=` or `<-`
+
+```{r} 
+x <- 3.14
+y = 2.46
+```
+
+*R as a Calculator*
+You can use R as a calculator, using either variables or numbers.
+
+*Basic operators*:
+addition `+`, subtraction `-`, multiplication `*`, division `/`, exponential `^`
+
+```{r}
+x <- 3.14
+y <- 2.46
+x+y
+```
+
+*Arithmetic Functions*:
+•	sine [sin()]
+•	cosine [cos()] 
+•	tangent [tan()]
+•	exponential [exp()]
+•	logarithm [log()]
+•	round to nearest integer [round()]
+•	round up [ceiling()]
+•	round down [floor()]
+
+Note:  For functions, there will be some arguments that are mandatory, and some that are optional.  The arguments are separated by a comma.  If you do not specify the optional arguments, R will use a default value.
+
+Ex:
+The log function has a mandatory argument for the number/variable you are logging and an optional argument for the base.  The default base is e.
+
+```{r}
+log(x)
+log(x = 5, base=10)
+```
+
+*Exercise*:
+Define p to be 3.14159 and r to be 1.41421.  Find the product of p and r.
+
+```{r}
+p = 3.14159
+r = 1.41412
+p*r
+```
+
+
+## 1.3	Packages
+
+R is open source and many contributors allow their programming to be downloaded from R servers.
+
+To download and install the package from the Comprehensive R Archive Network (CRAN), you just need to ask RStudio it to install it via the menu Tools -> Install Packages.  Type in the name of the package and RStudio will download and install the package on your computer.
+
+Once a package is downloaded and installed on your computer, it is available, but it is not loaded into your current R session by default.  To keep your computer from being bogged down, only a few packages are loaded by default and then you must explicitly load packages whenever you want to use them.
+
+You will *load the package* using the command library().
+
+```{r}
+library(dplyr)
+```
+
+
+## 1.4	Getting Help
+
+*Two main ways*:
+•	Built in Documentation
+•	Online Help
+
+*How does this function work?*
+If you know the function you want to use but don’t know how to use it.  Use the help() function to see the built in documentation to see what arguments needs and what the function will return.  You can also type a ? in front of the function you want to use to get the help documentation.
+
+*How does this package work?*
+Google "R package XXXX" and that will lead to documentation on CRAN that gives a list of functions in the package.
+
+*How do I do XXX?*
+Use online sites such as:
+•	StackOverflow
+
+
+## 1.6	Vectors
+
+The most fundamental collection of values is called a vector.
+A vector is an array-like object that consists of finite ordered sequence of atomic objects of the same type (e.g. all integers or all character strings).
+
+To create a vector, we just need to use the collection function c().  C stands for concatenate; the command just concatenates the items inside of the parentheses into a vector.  Must be the same type!  R will not catch mis
+-match types, so validate your data for large sets!  For data sets, an entire or row
+is a vector of data.
+
+```{r}
+x <- c(1, 2, 3, 4, 5)
+y <- c('A', 'B', 'C', 'D')
+```
+
+Shortcuts to produce vectors:
+•	The notation A:B will produce a vector starting with A and incrementing by one until we get to B.  In R, numbering starts
+at 1 not 0. Includes the last number in the specified range!
+
+```{r}
+a <- 1:10
+a
+```
+
+•	The function rep(x, times) just repeats x a the number times specified by times.  Inserting the comma  and using c function and an additional argument concatenates the two vectors.  
+
+```{r}
+b <- c(rep(1, times = 4), 2:4)
+b
+```
+
+•	The function seq(from, to, by, length.out) will define a sequence of numbers.  Can only take 3 parameters of those available!
+o	The possible arguments are from, to, by, and length.out. From is the starting point of the sequence, to is the ending point, by is the difference between any two successive elements, and length.out is the total number of elements in the vector. This is inclusive end and starting points.  
+
+```{r}
+c <- c(seq(from = 0, to = 100, by = 25))
+c
+```
+
+•	If you want to combine vectors you can use the c() function.
+
+```{r}
+d <- c(a, b, c)
+d
+```
+
+You can call items in the vector by typing the name of the vector with brackets around the index of the item or index range of the vector you want to pull.  To call a string of items, use :.  To call individual indexed values, use c() to create vector of the values you want to index.  To delete items use – sign.  You can use | to indicate a logical the values in the vector must pass to be included in output.
+
+```{r}
+x[3]
+x[2:4] # returns a range
+x[c(1, 3)] # concatonates the indexed items you are calling
+x[-c(1, 3)] # returns everything except the indexed items called
+x|x > 0 # returns bool for each item in the vector based on the condition used
+x[x<3 & x!=1] # returns the item (instead of a bool) based on the condition
+```
+
+*Scalar Functions Applied to Vectors*
+Functions that are inherently defined on single values will almost always apply the function to each element of the vector if given a vector.  Distributes to each item in the vector, just like math vector rules.
+
+```{r}
+a
+2*a
+```
+
+
+*Vector Algebra*
+All algebra done with vectors will be done element-wise by default.  For matrix and vector multiplication as usually defined by mathematicians, use `%*%` instead of *.  In math, for example, multiplying matrices must follow size rules!  Otherwise R math, will multiply elements item by item.  So two vectors added together result in their individual elements being summed.
+
+Note:  If the lengths of the vectors are not the same, R will recycle the elements of the shorter vector to make the dimensions match.
+
+```{r}
+b <- c(5:8) #since b is shorter than a, it will cycle over b again add element by element until all of a is used
+a+b
+```
+
+*Commonly use functions*:
+Let x and y be vectors of the same length.
+•	min(x):  Minimum value in vector x
+•	max(x):  Maximum value in vector x
+•	length(x):  Number of elements in vector x
+•	sum(x):  Sum of all the elements in vector x
+•	mean(x):  Mean of the elements in vector x
+•	median(x):  Median of the elements in vector x
+•	var(x):  Variance of the elements in vector x
+•	sd(x):  Standard deviation of the elements in x
+•	pmax(x,y):  Pairwise maximum of x and y
+•	pmin(x,y):  Pairwise minimum of x and y
+
+
+Check the length of the vector by function `length()`.
+
+If you want to count the number of characters in a categorical variable use `nchar()`.
+
+To check the type of elements in your vector use `typeof()`.
+
+*Exercise*:
+Let `fib = c(0, 1, 1, 2, 3, 5, 8, 13, 21)`.  Find the standard deviation, mean, and sum of fib.  Then let `bon = c(34, 55, 89, 144, 233, 377, 610, 987, 1597)`.  Using vector algebra, find the product between `fib` and `bon`.
+
+```{r}
+fib = c(0, 1, 1, 2, 3, 5, 8, 13, 21)
+bon = c(34, 55, 89, 144, 233, 377, 610, 987, 1597)
+sd(fib)
+var(fib)
+mean(fib)
+sum(fib)
+fib%*%bon # answer in sized matrix
+```
+
+
+## 1.5	Basic Types of Objects 
+
+*Two Parts of Statistics*:
+•	Descriptive statistics: collecting, summarizing and presenting data
+
+•	Inferential statistics: drawing conclusions about a population based on sample data by running statistical procedures such as hypothesis tests
+
+
+*Measurements*
+Cases: objects of interest in a certain study, described by a set of data; e.g. customers, voters, patients, students, cars, pets
+
+*Random variables*:
+Special characteristics of cases; e.g. customers’ satisfactory, voters’ preference, patients’ recovery rates, students’ grades, cars’ gas mileage, pets’ breed
+
+•	These are random variables, they vary from case to case and there is randomness involved since the response depends on the individual case being chosen
+
+Ex: # of students of a randomly chosen class
+
+
+*Data types*:
+•	*Numerical* (Quantitative)
+o	Discrete: distinct points on a number line (whole number); e.g. # of siblings, # of defects per day
+o	Continuous: takes on values over a range on a number line; e.g. time, height, weight, voltage
+
+•	*Categorical* (Qualitative) </p>
+o	Nominal: order does not matter; e.g. marital status, political party, eye color, zip code (numbers cab be nominal!)
+o	Ordinal: weight associated with outcome; e.g. satisfaction level, students’ grades
+
+Note:  You can turn categorical data into numerical by assigning numbers to responses.
+
+• *Characters* (“string”)
+Collections of characters.  To convert to character use function as.character().
+
+• *Integer variables*
+Integer numbers (…, -2, -1, 0, 1, 2, …).  To convert numeric to integer use function as.integer().  as.Integer() will truncate decimal portion of numbers.
+
+Note: The two most common numeric classes used in R are integer and double (for double precision floating point numbers). R automatically converts between these two classes when needed for mathematical purposes. 
+
+By default, when you create a numeric vector using the c() function it will produce a vector of double precision numeric values. To create a vector of integers using c() you must specify explicity by placing an L directly after each number.
+
+Ex: `c(1, 0, 0, 1)` vs. `c(1L, 0L, 0L, 1L)` will create a list of doubles and integers, respectively.
+
+Floats are (double) default in R!!
+
+• *Numeric*
+An number (whole number or decimal).  To convert another type to numeric use function as.numeric().
+Default for all numeric values inputted into R. </p>
+
+• *Factor*
+Categorical values from a finite set.  May convert another type to factor using function as.factor().
+Default for all non numeric values inputted into R.
+
+• *Logical* (“Boolean”; True/False)
+Can only take on TRUE and FALSE values.  0 will be FALSE and 1 will be TRUE using the function as.logical() on numeric values.
+
+To check type of variable, use typeof().
+To check what possible groups of a variable there are use levels().
+
+```{r}
+y <- c("B", "B", "A", "C")
+y
+z <- factor(y) # Factors have levels and repeated levels are only shown once
+z
+as.numeric(z) # returns levels as ordered numerics as listed in original vector
+as.character(z) # Returns string labels for levels as listed in original vector
+levels(z) # returns levels
+table(z) #lists levels and how many occurrences per level on multiple lines
+```
+
+*Exercise*:
+For: `val = c("True", "True", "False", "False", "Flase", "True")`, create a vector, `bin`, that substitutes "True" with 1 and "False" with 0.  Verify the types of `val` and `bin`.
+
+```{r}
+val = c("True", "True", "False", "False", "False", "True")
+typeof(val)
+bin = as.logical(val)
+bin
+typeof(bin)
+as.numeric(bin)
+```
+
+
+## 1.7	Matrices
+
+To create a matrix in R we can create it directly using the matrix() command which requires the data to fill the matrix with, and optionally, some information about the number of rows and columns:
+
+`matrix(data =, nrow =, ncol =, byrow =, dimnames =)`
+
+•	Data:  an optional data vector or list
+•	Nrow:  number of rows
+•	Ncol:  the number of columns
+•	Byrow:  True/False logical.  False (default) means the matrix is filled by columns.  True indicates the matrix will be filled by rows.
+•	Dimnames:  a named list specifying the names of the dimensions.  An empty list is treated as NULL.
+
+```{r}
+seasons <- matrix(
+  month.abb[c(12, 1:11)], #FUNCTION MONTH.ABB gives months of year in abbrev.
+  nrow = 3, #data is filled by column by default
+  dimnames = list(
+    c("start", "middle", "end"), #rows
+    c("Winter", "Spring", "Summer", "Fall") #columns
+  )
+)
+seasons
+```
+
+```{r}
+s <- c(2, 3, 4, 5, 6, 7)
+matrix(data = s, nrow = 2, ncol = 3, byrow = TRUE) # setting this true fills data by row
+```
+
+*Alternative*
+The alternative to the `matrix()` command is we could create two columns as individual vectors and just push them together.  Or we could have made three rows and lump them by rows instead.
+
+To do this we’ll use a group of functions that bind vectors together.
+
+To join two column vectors together, we’ll use cbind and to bind rows together we’ll use the rbind function
+
+```{r}
+t <- c(8, 9, 10, 11, 12, 13)
+
+cbind(s, t)
+x = rbind(s, t)
+y = rbind(t, s)
+x
+y
+
+```
+
+
+*Adding matrix components*
+You can sum rows by using function rowSums() </p>
+You can sum columns by using function colSums() </p>
+
+Remember: Vectors compose matrices and vectors cannot have different types of elements.
+
+```{r}
+rowSums(x)
+colSums(y)
+```
+
+*Exercise*:
+Using `fib` and `bon` defined above and using `cbind` and `rbind`, create two matrices: A a 9x2 matrix and B a 2x9 matrix.  Using vector algebra, multiply the two matrices.
+
+```{r}
+fib = c(0,1,1,2,3,5,8,13,21)
+bon = c(34,55,89,144,233,377,610,987,1597)
+
+B = rbind(fib,bon)
+A = cbind(fib,bon)
+A %*% B
+B %*% A
+```
+
+
+## 1.8	Lists; NA, NaN, Inf
+
+*Lists*:
+An array-like object that allows its components to be of different types.  Indexing may be done by double brackets.  Use function `list()`.
+
+```{r}
+xli <- list(17, 17L, 17.0, c("foo", 22, FALSE), c(7, "eleven"), 2-3i)
+print(xli)
+```
+***In double brackets, is the list item index(element number).  In single bracket is the row.***
+***Remember default is float, add L after number to force integer***
+
+See that the printed components shows the elements with the item number in brackets so you can call them with brackets:
+
+```{r}
+foo <- xli[1]
+typeof(foo)
+foo
+foo <- xli[4]
+typeof(foo)
+length(xli) 
+```
+***access elements in list by name of list[index of element]or name of list[[index of element]][object in element]**
+
+*NA*:
+Not available; missing data when R thinks there is something that should be there but is not.  Can check using `is.na()` and `table(is.na())` to see how many components are false and how many are true.
+
+```{r}
+x <- c(2, NA, 2.2, 4, 5, 6)
+mean(x)
+is.na(x)
+table(is.na(x))
+```
+
+*NaN*:
+Not a number.  Considered a double type of variable; not a real number.
+
+```{r}
+x <- 0/0
+x
+sqrt(-1)
+```
+
+*Inf*:
+Infinity.  Might want to check `is.finite()` or `is.infinite()`.
+
+```{r}
+x <- 1/0
+x
+typeof(x)
+is.finite(x)
+is.infinite(x)
+```
+
+*Round off Error*
+
+Real numbers are stored using binary not decimal system:
+
+0.1 = 1/10 = 0/100 + 1/101 + 0/102 + …
+
+*In binary system*:
+
+0.1 = 0/20 + 0/21 + 0/22 + 0/23 + 1/24 + 1/25 + 0/26 + 0/27 …
+
+
+Check to see if left and right sign are the same with `==` sign.  
+*** == compares left side to right side and returns bool**
+
+```{r}
+1+2 == 3
+0.1+0.2 == 0.3
+x <- 0.1+0.2
+x == 0.3
+format(x, digits = 17)
+
+x #R by default uses 6 or 7 digits to write a number unless you force it as above; even though you see 0.3 as x the number is not stored as 0.3 exactly
+```
+
+Compare using absolutely values:
+
+```{r}
+abs(x-0.3) < 0.00000001 #When you want to check floating numbers, you should use absolute value of the value minus itself compared to some level of accuracy
+```
+
+*Exercise*:
+Create a list with 4 elements, all of which are different types of variables.  Name this list `difTyp`.  Name the 3rd item `dif3`.
+
+```{r}
+difTyp = pairlist(one="string", dif3 = 2, three = 3L, four = FALSE)
+typeof(difTyp$three[1])
+typeof(difTyp[[4]][1])
+```
+
+
+## 1.9	Data Frames
+
+One of the basic objects in R is a *data frame*.  Data frames are used to store data in 2 dimensional form.
+
+While the matrix typically has numbers as entries, data frames can contain multiple types of data.  However, each column is a vector of entries of the same type.  All columns must also be the same length so the data frame has a "rectangular shape."  missing values will be filled with NAs to make it rectangular.
+
+May also use data tables and tibbles.
+
+A list is a loosely structured data frame.
+
+
+*Exploring data frames*:
+
+Use the `head()` command to see the first 6 cases/observations (rows) of the data to make sure it looks right.  R has data frames that come with the base, such as Iris data set.  We see below that there are 6 cases (rows) and each column represents 1 characteristic corresponding to each case.
+
+```{r}
+head(iris)
+head(iris, 3) #Report only 3 cases)
+tail(iris) #See last (default) 6 cases
+```
+
+Notice that some rows are numeric and some are categorical.
+
+
+*Other Important functions for exploring data frames*:
+•	`str()`, function you can see the type of object and summarization of variables (including assignment of variable type).
+•	`colnames()` function will list the column names of that data frame.
+•	`unique()` function will show the unique element outcomes of variables
+•	`dim()` function will show the # of rows and the # of columns
+•	`nrow()` function will show the number of rows
+•	`ncol()` function will show the number of columns
+•	`length()` function will show the number of columns
+
+```{r}
+str(iris) # structure
+summary(iris) # gives statistics per variable
+colnames(iris)
+unique(iris[,'Species']) #show the unique values from the last column from data frame iris
+dim(iris)
+nrow(iris)
+ncol(iris)
+length(iris)  ## for data.frames, the length refers to the number of columns, not the total number of elements.
+
+x <- c(1:30)
+m <- matrix(data = x, nrow = 5, ncol = 6, byrow = FALSE)
+length(m) ## gives the number of elements (to compare to dataframe length)
+```
+
+*Creating data frames*
+
+• The easiest way to create a data set is to combine columns.
+
+```{r}
+name <- c("Aoife", "Barnaby", "Caoimhe")
+score <- c(90, 95, 92)
+df <- cbind(name, score)
+df
+
+rbind(name, score)
+```
+
+
+You can use the data.frame() function to create data frames.
+
+`data.frame(…, row.names = NULL, check.rows = FALSE,
+           check.names = TRUE, fix.empty.names = TRUE,
+           stringsAsFactors = default.stringsAsFactors())`
+
+
+You can import data such as csv files using `read.csv(file = "", header = "", sep = ",")` function.
+
+
+*Basic Data Manipulation*:
+
+Define variable using `$` to pull the column named that word in the data frame referenced.  The result will be a vector from the data frame.
+
+```{r}
+spec <- iris$Species
+head(spec)
+str(spec)
+table(spec)
+unique(spec)
+```
+
+You can name each of the columns in a data frame so that you can call them by name in the global environment.  Use the function attach() to name each variable (column) in the data frame.
+
+```{r}
+attach(iris)
+head(iris)
+```
+
+
+*Subsetting R Objects*
+Three operators
+•	Single bracket [ ] operator will return an object of the same class as the original
+o	Used to select multiple elements of an object
+
+Format		Result
+[a,b]		Element in row a and column b
+[a,]		All of row a
+[,b]		All of column b
+
+•	Double bracket [[ ]] will extract elements of a list or data frame
+o	Used to extract a single element of an object and the class of the return object will not necessarily be a list or data frame
+•	Dollar sign $ is used to extract elements of a list or data frame by its literal name
+
+
+Ex:
+```{r}
+iris[ ,1:3] #returns columns 1,2,3
+iris[, c(1,3)] # concatonation of 1st and 3rd column
+iris[c(1,3), ] # concatonate 1st and 3rd rows
+iris[, 'Petal.Length'] # reference the column by name
+iris[, c('Sepal.Length', 'Petal.Length')] # concatonate two columns by name
+iris[iris$Species == 'versicolor', ] #anytime this is true, will return -- looking at iris dataframe and species column == versicolor (gives rows that fulfil these)
+dim(iris[iris$Species == 'versicolor', ]) # gives dimensions of results
+```
+
+*Logical operators*: 
+•	& or AND
+•	| or OR # inclusive or (can be both)
+•	! or NOT
+
+```{r}
+iris[,3]
+iris[(iris$Species == 'versicolor') & (iris$Sepal.Length <= 5.0),] #species is versicolor AND length at most 5
+dim(iris[(iris$Species == 'versicolor') & (iris$Sepal.Length <= 5.0),]) #there are 3 observations
+```
+
+*Exercise*:
+Using the dataframe called `starwars` from the `dplyr` package, view the first 3 rows.  Then, let S be subset of all rows and first three columns of `starwars`.  find the dimensions of S.
+
+```{r}
+library(dplyr)
+starwars
+head(starwars,3)
+s <- head(starwars,3)
+s
+dim(s)
+```
+
+*Plotting*
+```{r}
+x <- iris$Petal.Length # easier to save into variables as arguments for plot
+y <- iris$Sepal.Length
+plot(x, y, pch = 16, xlab = 'Petal Length', # pch is the type of point using, xlab = x axis label, main = title of plot, col= colorize based on species
+	ylab = 'Sepal Length',
+	main = 'Iris Sepal Length VS Petal Length',
+	col = iris$Species)
+
+#first argument vector of x, second vector of y, pch is the numerical code of a shape you can use, color based on species
+```
+
+*Exercise*:
+Plot S, where `height` is on the x axis and `mass` is on the y axis.  Name the graph "Star Wars Height vs. Mass."
+
+```{r}
+x <- starwars$height
+y <- starwars$mass
+plot(x,y,pch=13,xlab = 'Height', ylab = 'Mass', main = "Height vs Mass")
+```
